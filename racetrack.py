@@ -7,7 +7,10 @@ import math
 import numpy as np
 import pygame
 import matplotlib.pyplot as plt
+import sys
+np.set_printoptions(threshold=sys.maxsize)
 
+import layout
 
 # In[2]:
 
@@ -628,8 +631,12 @@ class Visualizer:
         for i in range(self.data.episode['S']):
             vis.visualize_racetrack(i)
 
-import sys
-np.set_printoptions(threshold=sys.maxsize)
+################################################################################
+layout_name = 'f1'
+layout2 = layout.getLayout( layout_name )
+
+
+################################################################################
 
 
 # data = Data()
