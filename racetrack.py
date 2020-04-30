@@ -3,6 +3,7 @@
 
 # In[1]:
 
+import math
 import numpy as np
 import pygame
 import matplotlib.pyplot as plt
@@ -207,6 +208,33 @@ class Data:
 class Environment:
 
     #HELPFUL FUNCTIONS
+    def rotate_vector(self, x, y, angle):
+        newX = x * math.cos(angle) - y * math.sin(angle)
+        newY = x * math.sin(angle) + y * math.cos(angle)
+        return [newX, newY]
+
+    def noisy_action(self, action):
+        from random import random
+        r = random()
+
+        # action succeeds normally
+        if r <= 0.9:
+            return action
+        # left 45
+        elif r <= 0.93:
+            return self.rotate_vector(action[0], action[1], -math.pi/4)
+        # right 45
+        elif r <= 0.96:
+            return self.rotate_vector(action[0], action[1], math.pi/4)
+        # left 90
+        elif r <= 0.97:
+            return self.rotate_vector(action[0], action[1], -math.pi/2)
+        # right 90
+        elif r <= 0.98:
+            return self.rotate_vector(action[0], action[1], math.pi/2)
+        #action fails
+        else:
+            return [0, 0]
 
     def get_new_state(self, state, action):
         '''
@@ -215,6 +243,7 @@ class Environment:
         velocity and then action is applied to
         change the velocity
         '''
+        action = self.noisy_action(action)
         new_state = state.copy()
         new_state[0] = state[0] - state[2]
         new_state[1] = state[1] + state[3]
