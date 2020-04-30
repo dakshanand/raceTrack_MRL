@@ -16,6 +16,7 @@ from util import manhattanDistance
 from game import Grid
 import os
 import random
+import numpy as np
 
 VISIBILITY_MATRIX_CACHE = {}
 
@@ -28,8 +29,8 @@ class Layout:
         self.width = len(layoutText[0])
         self.height= len(layoutText)
         self.racetrack = Grid(self.width, self.height, False)
-        # self.finish = Grid(self.width, self.height, False)
-        # self.start = Grid(self.width, self.height, False)
+        self.startStates = []
+        self.finishStates = []
         self.agentPositions = []
         self.possibleAgentPositions = []
         self.processLayoutText(layoutText)
@@ -100,10 +101,11 @@ class Layout:
     def processLayoutChar(self, x, y, layoutChar):
         if layoutChar == '#':
             self.racetrack[x][y] = 1
+            self.startStates.append( (x, y) )
         elif layoutChar == '%':
             self.racetrack[x][y] = 2
         elif layoutChar == '.':
-            # self.racetrack.append((x,y))
+            self.finishStates.append( (x, y) )
             self.racetrack[x][y] = 3
         elif layoutChar == 'P':
             self.racetrack[x][y] = 4
@@ -126,5 +128,9 @@ def getLayout(name, back = 2):
 def tryToLoad(fullname):
     if(not os.path.exists(fullname)): return None
     f = open(fullname)
-    try: return Layout([line.strip() for line in f])
+    try:
+        # lines = [line.strip() for line in f]
+        # lines.reverse()
+        # return Layout(lines)
+        return Layout([line.strip() for line in f])
     finally: f.close()
