@@ -7,6 +7,7 @@ import layout_parser
 from variables import *
 from visualizer import Visualizer
 from environment import Environment
+from qLearningAgents import *
 
 layout_name = 'f1'
 layout = layout_parser.getLayout( layout_name )
@@ -16,6 +17,7 @@ env = Environment(layout)
 
 env.reset()
 state = env.start()
+agent = DQNBaselineAgent()
 print "start_state", state
 
 reward = -1
@@ -26,6 +28,8 @@ while 1:
         env.reset()
         reward = -1
         state = env.start()
-    reward, state = env.step(state, action)
-    action = (1,1)
+    action = agent.getAction(state)
+    reward, newState = env.step(state, action)
+    agent.update(state, action, newState, reward)
+    state = newState
     vis.visualize_racetrack(state)

@@ -16,31 +16,31 @@ from variables import *
 class Agent:
 
     #HELPFUL FUNCTIONS
-    def possible_actions(self, velocity):
-        '''
-        *** Performs two tasks, can be split up ***
-        Universe of actions:  alpha = [(-1,-1),(-1,0),(0,-1),(-1,1),(0,0),(1,-1),(0,1),(1,0),(1,1)]
-
-        Uses constraints to filter out invalid actions given the velocity
-
-        0 <= v_x < 5
-        0 <= v_y < 5
-        v_x and v_y cannot be made both zero (you can't take
-        an action which would make them zero simultaneously)
-        Returns list of possible actions given the velocity
-        '''
-        alpha = [(-1,-1),(-1,0),(0,-1),(-1,1),(0,0),(1,-1),(0,1),(1,0),(1,1)]
-        alpha = [np.array(x) for x in alpha]
-
-        beta = []
-        for i,x in zip(range(9),alpha):
-            new_vel = np.add(velocity,x)
-            if (new_vel[0] < 5) and (new_vel[0] >= 0) and (new_vel[1] < 5) and \
-             (new_vel[1] >= 0) and ~(new_vel[0] == 0 and new_vel[1] == 0):
-                beta.append(i)
-        beta = np.array(beta)
-
-        return beta
+    # def possible_actions(self, velocity):
+    #     '''
+    #     *** Performs two tasks, can be split up ***
+    #     Universe of actions:  alpha = [(-1,-1),(-1,0),(0,-1),(-1,1),(0,0),(1,-1),(0,1),(1,0),(1,1)]
+    #
+    #     Uses constraints to filter out invalid actions given the velocity
+    #
+    #     0 <= v_x < 5
+    #     0 <= v_y < 5
+    #     v_x and v_y cannot be made both zero (you can't take
+    #     an action which would make them zero simultaneously)
+    #     Returns list of possible actions given the velocity
+    #     '''
+    #     alpha = [(-1,-1),(-1,0),(0,-1),(-1,1),(0,0),(1,-1),(0,1),(1,0),(1,1)]
+    #     alpha = [np.array(x) for x in alpha]
+    #
+    #     beta = []
+    #     for i,x in zip(range(9),alpha):
+    #         new_vel = np.add(velocity,x)
+    #         if (new_vel[0] < 5) and (new_vel[0] >= 0) and (new_vel[1] < 5) and \
+    #          (new_vel[1] >= 0) and ~(new_vel[0] == 0 and new_vel[1] == 0):
+    #             beta.append(i)
+    #     beta = np.array(beta)
+    #
+    #     return beta
 
     def map_to_1D(self,action):
         alpha = [(-1,-1),(-1,0),(0,-1),(-1,1),(0,0),(1,-1),(0,1),(1,0),(1,1)]
@@ -53,13 +53,17 @@ class Agent:
         return alpha[action]
 
     #CONSTRUCTOR
-    def __init__(self):
+    def __init__(self, **args):
         pass
 
-    def get_action(self, state, policy):
+    def update(self, state, action, nextState, reward):
+        pass
+
+    def get_action(self, state):
         '''
         Returns action given state using policy
         '''
         # return self.map_to_2D(policy(state, self.possible_actions(state[2:4])))
         # action = np.random.choice(possible_actions)
-        return self.map_to_2D(policy(state, self.possible_actions(state[2:4])))
+        # return self.map_to_2D(policy(state, self.possible_actions(state[2:4])))
+        pass
