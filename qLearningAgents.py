@@ -25,7 +25,7 @@ class DQNBaselineAgent(Agent):
         Agent.__init__(self, **args)
         self.epsilon = 1.0
         self.min_epsilon = 0.01
-        self.decay = 0.999
+        self.decay = 0.9995
         self.nb_features = 4
         self.nb_actions = 9
         self.Agent = DqnModule(featureExtractor = simpleExtractor, nb_features = self.nb_features)
@@ -42,7 +42,7 @@ class DQNBaselineAgent(Agent):
     def update(self, state, action, nextState, reward):
         if self.epsilon > self.min_epsilon:
             self.epsilon *= self.decay
-        self.Agent.update(state, self.map_to_1D(action), nextState, reward, done = 0)
+        self.Agent.update(state, self.map_to_1D(action), nextState, reward/50.0, done = 0)
 
 class DqnModule():
     '''

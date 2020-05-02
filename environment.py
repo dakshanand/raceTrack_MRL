@@ -9,6 +9,7 @@ import math
 import numpy as np
 import pygame
 import random
+import pickle
 
 import layout_parser
 from variables import *
@@ -24,6 +25,7 @@ class Environment:
         initialize step_count to be 0
         '''
         self.layout = layout
+        self.dist = pickle.load( open( "dist.p", "rb" ) )
         self.rows = self.layout.racetrack.width
         self.cols = self.layout.racetrack.height
         self.max_vel_mag = 3
@@ -52,6 +54,9 @@ class Environment:
         reward = -1
         self.step_count += 1
         status, final_pos = self.move_the_car(np.array(state[:2]), np.array(state[2:4]))
+        del_dist = self.dist[int(state[0])][int(state[1])] - self.dist[int(final_pos[0])][int(final_pos[1])]
+
+        # print state[:2], final_pos, del_dist
         state[:2] = final_pos
 
         if status == 'collision':
@@ -60,17 +65,17 @@ class Environment:
             acceleration = np.array([accx, accy])
             state[2:4] = self.update_velocity(state[2:4], acceleration)
         elif status == 'finish':
-            reward = None
+            reward = 100
         else:
             # acceleration = self.noisy_action(action)
             acceleration = action
             state[2:4] = self.update_velocity(state[2:4], acceleration)
 
-        return reward, state
+        return reward + del_dist, state
 
     def move_the_car(self, initial_pos, velocity_vector):
         if (velocity_vector[0] <= 0.0001) and (velocity_vector[1] <= 0.0001):
-            print 'moving the car', initial_pos, velocity_vector
+            # print 'moving the car', initial_pos, velocity_vector
             return '', initial_pos
 
         current_pos = initial_pos
@@ -78,36 +83,36 @@ class Environment:
         unit_direction = velocity_vector / magnitude
         total_steps = int(round(magnitude / self.step_size))
         step = self.step_size * unit_direction
-        print 'moving the car', initial_pos, velocity_vector, step, total_steps
+        # print 'moving the car', initial_pos, velocity_vector, step, total_steps
 
         for i in range(total_steps):
             current_pos = current_pos + step
-            print current_pos
-            xf, yf = np.round(current_pos).astype(int)
+            # print current_pos
+            xf, yf = (current_pos).astype(int)
             if self.layout.racetrack[xf][yf] == WALL_CELL:
-                print 'WALL_CELL'
+                # print 'WALL_CELL'
                 current_pos = current_pos - step
                 direction_to_move = self.find_direction_to_move(current_pos, step)
                 velocity_vector = np.array(direction_to_move) * step * (total_steps - i)
                 _, current_pos = self.move_the_car(current_pos, velocity_vector)
                 return 'collision', current_pos
             elif self.layout.racetrack[xf][yf] == FINISH_CELL:
-                print 'FINISH_CELL'
+                # print 'FINISH_CELL'
                 return 'finish', current_pos
         return '', current_pos
 
     def find_direction_to_move(self, current_pos, step):
-        xi, yi = np.round(current_pos).astype(int)
+        xi, yi = (current_pos).astype(int)
         final_pos = current_pos + step
-        xf, yf = np.round(final_pos).astype(int)
+        xf, yf = (final_pos).astype(int)
         if self.layout.racetrack[xf][yi] != WALL_CELL:
-            print '[1,0]'
+            # print '[1,0]'
             return [1,0]
         elif self.layout.racetrack[xi][yf] != WALL_CELL:
-            print '[0,1]'
+            # print '[0,1]'
             return [0,1]
         else:
-            print '[0,0]'
+            # print '[0,0]'
             return [0,0]
 
     def update_velocity(self, velocity, acceleration):
