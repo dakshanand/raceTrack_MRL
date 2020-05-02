@@ -17,6 +17,7 @@ WHITE = (255,255,255)
 RED = (255, 0, 0)
 BLUE = (0, 255 ,0)
 GREEN = (0, 0, 255)
+BLACK = (0, 0, 0)
 ################################################################################
 ################################################################################
 
@@ -61,6 +62,8 @@ class Visualizer:
                     color = RED
                 elif self.layout.racetrack[i][j] == FINISH_CELL:
                     color = BLUE
+                else:
+                    color = BLACK
                 pygame.draw.rect(self.display, color, ((i*self.cell_edge,j*self.cell_edge), self.blockSize), 1)
 
         if len(state)>0:
