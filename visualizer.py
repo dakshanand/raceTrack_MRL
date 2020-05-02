@@ -6,15 +6,17 @@
 # attribution to Vaibhav Gupta
 
 import math
-import numpy as np
 import pygame
+import numpy as np
+
+from variables import *
 
 ################################################################################
 ################################################################################
 WHITE = (255,255,255)
 RED = (255, 0, 0)
-GREEN = (0, 255 ,0)
-BLUE = (0, 0, 255)
+BLUE = (0, 255 ,0)
+GREEN = (0, 0, 255)
 ################################################################################
 ################################################################################
 
@@ -53,14 +55,13 @@ class Visualizer:
         self.display.fill(0)
         for i in range(self.rows):
             for j in range(self.cols):
-                if self.layout.racetrack[i][j] != -1:
-                    if self.layout.racetrack[i][j] == 1:
-                        color = GREEN
-                    elif self.layout.racetrack[i][j] == 2:
-                        color = RED
-                    elif self.layout.racetrack[i][j] == 3:
-                        color = BLUE
-                    pygame.draw.rect(self.display, color, ((i*self.cell_edge,j*self.cell_edge), self.blockSize), 1)
+                if self.layout.racetrack[i][j] == START_CELL:
+                    color = GREEN
+                elif self.layout.racetrack[i][j] == WALL_CELL:
+                    color = RED
+                elif self.layout.racetrack[i][j] == FINISH_CELL:
+                    color = BLUE
+                pygame.draw.rect(self.display, color, ((i*self.cell_edge,j*self.cell_edge), self.blockSize), 1)
 
         if len(state)>0:
             pygame.draw.rect(self.display, WHITE ,((state[0]*self.cell_edge, state[1]*self.cell_edge), self.blockSize), 0)

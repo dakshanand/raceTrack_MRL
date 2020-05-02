@@ -14,6 +14,10 @@ import layout_parser
 from variables import *
 
 class Environment:
+    '''
+        Assumption: The car keeps on moving with the current
+        velocity and then action is applied to
+    '''
 
     def __init__(self, layout):
         '''
@@ -22,7 +26,7 @@ class Environment:
         self.layout = layout
         self.rows = self.layout.racetrack.width
         self.cols = self.layout.racetrack.height
-
+        self.step_size = 0.1
         self.step_count = 0
 
     def start(self):
@@ -30,12 +34,9 @@ class Environment:
         Makes the velocity of the car to be zero
         Returns the randomly selected start state.
         '''
-        state = np.zeros(4,dtype='int')
+        # state = np.zeros(4,dtype='int')
+        state = np.zeros(4,dtype='float')
         state[0], state[1] = random.choice(self.layout.startStates)
-
-        '''
-        state[2] and state[3] are already zero
-        '''
         return state
 
     def step(self, state, action):
@@ -48,20 +49,64 @@ class Environment:
         and state as usual (which will be terminating)
         '''
         reward = -1
-
-        if (self.is_finish_line_crossed(state, action)):
-            new_state = self.get_new_state(state, action)
-            self.step_count += 1
-            return None, new_state
-
-        elif (self.is_out_of_track(state, action)):
-            new_state = self.start()
-        else:
-            new_state = self.get_new_state(state, action)
-
         self.step_count += 1
+        status, final_pos = self.move_the_car(np.array(state[:2]), np.array(state[2:4]))
+        state[:2] = final_pos
 
-        return reward, new_state
+        if status == 'collision':
+            #TODO make velocity non negative
+            state[2:4] = state[2:4] - 1
+        elif status == 'finish':
+            reward = None
+        else:
+            state[2] += action[0]
+            state[3] += action[1]
+
+        return reward, state
+
+
+    def move_the_car(self, initial_pos, velocity_vector):
+        if (velocity_vector[0] <= 0.0001) and (velocity_vector[1] <= 0.0001):
+            # print 'moving the car', initial_pos, velocity_vector
+            return '', initial_pos
+
+        current_pos = initial_pos
+        magnitude = np.linalg.norm(velocity_vector)
+        unit_direction = velocity_vector / magnitude
+        total_steps = int(round(magnitude / self.step_size))
+        step = self.step_size * unit_direction
+        # print 'moving the car', initial_pos, velocity_vector, step, total_steps
+
+        for i in range(total_steps):
+            current_pos = current_pos + step
+            # print current_pos
+            xf, yf = np.round(current_pos).astype(int)
+            if self.layout.racetrack[xf][yf] == WALL_CELL:
+                # print 'WALL_CELL'
+                current_pos = current_pos - step
+                direction_to_move = self.find_direction_to_move(current_pos, step)
+                velocity_vector = np.array(direction_to_move) * step * (total_steps - i)
+                _, current_pos = self.move_the_car(current_pos, velocity_vector)
+                return 'collision', current_pos
+            elif self.layout.racetrack[xf][yf] == FINISH_CELL:
+                # print 'FINISH_CELL'
+                return 'finish', current_pos
+        return '', current_pos
+
+
+    def find_direction_to_move(self, current_pos, step):
+        xi, yi = np.round(current_pos).astype(int)
+        final_pos = current_pos + step
+        xf, yf = np.round(final_pos).astype(int)
+        if self.layout.racetrack[xf][yi] != WALL_CELL:
+            # print '[1,0]'
+            return [1,0]
+        elif self.layout.racetrack[xi][yf] != WALL_CELL:
+            # print '[0,1]'
+            return [0,1]
+        else:
+            # print '[0,0]'
+            return [0,0]
 
     def is_out_of_track(self, state, action):
         '''
@@ -76,7 +121,6 @@ class Environment:
 
         else:
             return self.layout.racetrack[new_cell[0]][new_cell[1]] == -1
-
 
     def reset(self):
         self.step_count = 0

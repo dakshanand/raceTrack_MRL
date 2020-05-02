@@ -17,6 +17,7 @@ from game import Grid
 import os
 import random
 import numpy as np
+from variables import *
 
 VISIBILITY_MATRIX_CACHE = {}
 
@@ -38,7 +39,7 @@ class Layout:
 
     def isWall(self, pos):
         x, col = pos
-        return self.racetrack[x][col] == 2
+        return self.racetrack[x][col] == WALL_CELL
 
     def getRandomLegalPosition(self):
         x = random.choice(range(self.width))
@@ -100,15 +101,15 @@ class Layout:
 
     def processLayoutChar(self, x, y, layoutChar):
         if layoutChar == '#':
-            self.racetrack[x][y] = 1
+            self.racetrack[x][y] = START_CELL
             self.startStates.append( (x, y) )
         elif layoutChar == '%':
-            self.racetrack[x][y] = 2
+            self.racetrack[x][y] = WALL_CELL
         elif layoutChar == '.':
             self.finishStates.append( (x, y) )
-            self.racetrack[x][y] = 3
+            self.racetrack[x][y] = FINISH_CELL
         elif layoutChar == 'P':
-            self.racetrack[x][y] = 4
+            self.racetrack[x][y] = PLAYER_CELL
             # self.racetrack.append( (0, (x, y) ) )
 
 def getLayout(name, back = 2):
