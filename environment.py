@@ -26,6 +26,7 @@ class Environment:
         self.layout = layout
         self.rows = self.layout.racetrack.width
         self.cols = self.layout.racetrack.height
+        self.max_vel_mag = 3
         self.step_size = 0.1
         self.step_count = 0
 
@@ -54,20 +55,22 @@ class Environment:
         state[:2] = final_pos
 
         if status == 'collision':
-            #TODO make velocity non negative
-            state[2:4] = state[2:4] - 1
+            accx = self.get_deacceleration(state[2])
+            accy = self.get_deacceleration(state[3])
+            acceleration = np.array([accx, accy])
+            state[2:4] = self.update_velocity(state[2:4], acceleration)
         elif status == 'finish':
             reward = None
         else:
-            state[2] += action[0]
-            state[3] += action[1]
+            # acceleration = self.noisy_action(action)
+            acceleration = action
+            state[2:4] = self.update_velocity(state[2:4], acceleration)
 
         return reward, state
 
-
     def move_the_car(self, initial_pos, velocity_vector):
         if (velocity_vector[0] <= 0.0001) and (velocity_vector[1] <= 0.0001):
-            # print 'moving the car', initial_pos, velocity_vector
+            print 'moving the car', initial_pos, velocity_vector
             return '', initial_pos
 
         current_pos = initial_pos
@@ -75,52 +78,56 @@ class Environment:
         unit_direction = velocity_vector / magnitude
         total_steps = int(round(magnitude / self.step_size))
         step = self.step_size * unit_direction
-        # print 'moving the car', initial_pos, velocity_vector, step, total_steps
+        print 'moving the car', initial_pos, velocity_vector, step, total_steps
 
         for i in range(total_steps):
             current_pos = current_pos + step
-            # print current_pos
+            print current_pos
             xf, yf = np.round(current_pos).astype(int)
             if self.layout.racetrack[xf][yf] == WALL_CELL:
-                # print 'WALL_CELL'
+                print 'WALL_CELL'
                 current_pos = current_pos - step
                 direction_to_move = self.find_direction_to_move(current_pos, step)
                 velocity_vector = np.array(direction_to_move) * step * (total_steps - i)
                 _, current_pos = self.move_the_car(current_pos, velocity_vector)
                 return 'collision', current_pos
             elif self.layout.racetrack[xf][yf] == FINISH_CELL:
-                # print 'FINISH_CELL'
+                print 'FINISH_CELL'
                 return 'finish', current_pos
         return '', current_pos
-
 
     def find_direction_to_move(self, current_pos, step):
         xi, yi = np.round(current_pos).astype(int)
         final_pos = current_pos + step
         xf, yf = np.round(final_pos).astype(int)
         if self.layout.racetrack[xf][yi] != WALL_CELL:
-            # print '[1,0]'
+            print '[1,0]'
             return [1,0]
         elif self.layout.racetrack[xi][yf] != WALL_CELL:
-            # print '[0,1]'
+            print '[0,1]'
             return [0,1]
         else:
-            # print '[0,0]'
+            print '[0,0]'
             return [0,0]
 
-    def is_out_of_track(self, state, action):
-        '''
-        Returns True if the car goes out of track if action is taken on state
-                False otherwise
-        '''
-        new_state = self.get_new_state(state, action)
-        old_cell, new_cell = state[0:2], new_state[0:2]
+    def update_velocity(self, velocity, acceleration):
+        vxf, vyf = velocity + acceleration
+        if vxf > self.max_vel_mag: vxf = self.max_vel_mag
+        elif vxf < -self.max_vel_mag: vxf = -self.max_vel_mag
 
-        if new_cell[0] < 0 or new_cell[0] >= self.rows or new_cell[1] < 0 or new_cell[1] >= self.cols:
-            return True
+        if vyf > self.max_vel_mag: vyf = self.max_vel_mag
+        elif vyf < -self.max_vel_mag: vyf = -self.max_vel_mag
 
+        return [vxf, vyf]
+
+    def get_deacceleration(self, velocity):
+        if abs(velocity) <= 1:
+            deacceleration = -velocity
+        elif velocity > 1:
+            deacceleration = -1
         else:
-            return self.layout.racetrack[new_cell[0]][new_cell[1]] == -1
+            deacceleration = 1
+        return deacceleration
 
     def reset(self):
         self.step_count = 0
@@ -153,6 +160,11 @@ class Environment:
         else:
             return [0, 0]
 
+
+################################################################################
+##############################UNUSED FUNCTIONS##################################
+################################################################################
+
     def get_new_state(self, state, action):
         '''
         Get new state after applying action on this state
@@ -167,20 +179,6 @@ class Environment:
         new_state[2] = state[2] + action[0]
         new_state[3] = state[3] + action[1]
         return new_state
-
-    def select_randomly(self,NUMPY_ARR):
-        '''
-        Returns a value uniform randomly from NUMPY_ARR
-        Here NUMPY_ARR should be 1 dimensional
-        '''
-        return np.random.choice(NUMPY_ARR)
-
-    def set_zero(NUMPY_ARR):
-        '''
-        Returns NUMPY_ARR after making zero all the elements in it
-        '''
-        NUMPY_ARR[:] = 0
-        return NUMPY_ARR
 
     def is_finish_line_crossed(self, state, action):
         '''
@@ -201,3 +199,17 @@ class Environment:
         intersect = [x for x in row_col_matrix if x in fin]
 
         return len(intersect) > 0
+
+    def is_out_of_track(self, state, action):
+        '''
+        Returns True if the car goes out of track if action is taken on state
+                False otherwise
+        '''
+        new_state = self.get_new_state(state, action)
+        old_cell, new_cell = state[0:2], new_state[0:2]
+
+        if new_cell[0] < 0 or new_cell[0] >= self.rows or new_cell[1] < 0 or new_cell[1] >= self.cols:
+            return True
+
+        else:
+            return self.layout.racetrack[new_cell[0]][new_cell[1]] == -1

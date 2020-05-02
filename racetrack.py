@@ -34,9 +34,9 @@ while 1:
         action = (1,1)
         state = env.start()
     reward, state = env.step(state, action)
-    print state
     action = (1,1)
-    vis.visualize_racetrack(state)
+    print 'state', state, 'action', action
+    # vis.visualize_racetrack(state)
 
 ################################################################################
 ################################################################################
