@@ -32,7 +32,7 @@ class Visualizer:
         '''
         Does things which occur only at the beginning
         '''
-        self.cell_edge = 7
+        self.cell_edge = 10
         self.rows = self.layout.racetrack.width
         self.cols = self.layout.racetrack.height
         self.width = self.rows * self.cell_edge

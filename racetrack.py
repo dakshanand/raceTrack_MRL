@@ -51,18 +51,18 @@ reward = -1
 action = (1,1)
 numEpisodes = 1000
 trainingRewards = []
-for i in range(numEpisodes):
+for episode in range(numEpisodes):
     episodeReward = 0
     episodeSteps = 0
     while 1:
         action = agent.getAction(state)
         # print state, action
-        newState, reward, done = env.step(state, action)
+        nextState, reward, done = env.step(state, action)
         episodeReward += reward
         episodeSteps += 1
-        agent.update(state, action, newState, reward, done)
-        state = newState
-        if done or episodeSteps > 200:
+        agent.update(state, action, nextState, reward, done)
+        state = nextState
+        if done or episodeSteps > 1000:
             if done:
                 print "---------------------------------DONE--------------------------------"
             else:
@@ -71,8 +71,10 @@ for i in range(numEpisodes):
             reward = -1
             state = env.start()
             trainingRewards.append(episodeReward)
-            if i % 10 == 0 and i:
+            if episode % 10 == 0 and episode:
                 print trainingRewards
             # time.sleep(2)
             break
-        # vis.visualize_racetrack(state)
+        if episode > 50:
+            print state, nextState, action, reward
+            vis.visualize_racetrack(state)
