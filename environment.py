@@ -37,7 +37,6 @@ class Environment:
         Makes the velocity of the car to be zero
         Returns the randomly selected start state.
         '''
-        # state = np.zeros(4,dtype='int')
         state = np.zeros(4,dtype='float')
         state[0], state[1] = random.choice(self.layout.startStates)
         return state
@@ -51,7 +50,8 @@ class Environment:
         Ends the episode by returning reward as None
         and state as usual (which will be terminating)
         '''
-        reward = -1
+        reward = TIME_STEP_PENALTY
+        done = False
         self.step_count += 1
         status, final_pos = self.move_the_car(np.array(state[:2]), np.array(state[2:4]))
         del_dist = self.dist[int(state[0])][int(state[1])] - self.dist[int(final_pos[0])][int(final_pos[1])]
@@ -64,17 +64,21 @@ class Environment:
             accy = self.get_deacceleration(state[3])
             acceleration = np.array([accx, accy])
             state[2:4] = self.update_velocity(state[2:4], acceleration)
+            reward += COLLISION_PENALTY
         elif status == 'finish':
-            reward = 100
+            reward += FINISH_REWARD
+            done = True
         else:
-            # acceleration = self.noisy_action(action)
+            acceleration = self.noisy_action(action)
             acceleration = action
             state[2:4] = self.update_velocity(state[2:4], acceleration)
 
-        return reward + del_dist, state
+        reward += del_dist * REWARD_SHAPING_SCALE
+
+        return state, reward, done
 
     def move_the_car(self, initial_pos, velocity_vector):
-        if (velocity_vector[0] <= 0.0001) and (velocity_vector[1] <= 0.0001):
+        if (abs(velocity_vector[0]) <= 0.0001) and (abs(velocity_vector[1]) <= 0.0001):
             # print 'moving the car', initial_pos, velocity_vector
             return '', initial_pos
 
@@ -137,84 +141,30 @@ class Environment:
     def reset(self):
         self.step_count = 0
 
-    def rotate_vector(self, x, y, angle):
+    def rotate_vector(self, action, angle):
+        x, y = action
         newX = x * math.cos(angle) - y * math.sin(angle)
         newY = x * math.sin(angle) + y * math.cos(angle)
         return [newX, newY]
 
     def noisy_action(self, action):
-        from random import random
-        r = random()
+        r = random.random()
 
         # action succeeds normally
         if r <= 0.9:
             return action
         # left 45
         elif r <= 0.93:
-            return self.rotate_vector(action[0], action[1], -math.pi/4)
+            return self.rotate_vector(action, -math.pi/4)
         # right 45
         elif r <= 0.96:
-            return self.rotate_vector(action[0], action[1], math.pi/4)
+            return self.rotate_vector(action, math.pi/4)
         # left 90
         elif r <= 0.97:
-            return self.rotate_vector(action[0], action[1], -math.pi/2)
+            return self.rotate_vector(action, -math.pi/2)
         # right 90
         elif r <= 0.98:
-            return self.rotate_vector(action[0], action[1], math.pi/2)
+            return self.rotate_vector(action, math.pi/2)
         #action fails
         else:
             return [0, 0]
-
-
-################################################################################
-##############################UNUSED FUNCTIONS##################################
-################################################################################
-
-    def get_new_state(self, state, action):
-        '''
-        Get new state after applying action on this state
-        Assumption: The car keeps on moving with the current
-        velocity and then action is applied to
-        change the velocity
-        '''
-        action = self.noisy_action(action)
-        new_state = state.copy()
-        new_state[0] = state[0] - state[2]
-        new_state[1] = state[1] + state[3]
-        new_state[2] = state[2] + action[0]
-        new_state[3] = state[3] + action[1]
-        return new_state
-
-    def is_finish_line_crossed(self, state, action):
-        '''
-        Returns True if the car crosses the finish line
-                False otherwise
-        '''
-        return False
-        new_state = self.get_new_state(state, action)
-        old_cell, new_cell = state[0:2], new_state[0:2]
-
-        '''
-        new_cell's row index will be less
-        '''
-        rows = np.array(range(new_cell[0],old_cell[0]+1))
-        cols = np.array(range(old_cell[1],new_cell[1]+1))
-        fin = set([tuple(x) for x in self.layout.finishStates])
-        row_col_matrix = [(x,y) for x in rows for y in cols]
-        intersect = [x for x in row_col_matrix if x in fin]
-
-        return len(intersect) > 0
-
-    def is_out_of_track(self, state, action):
-        '''
-        Returns True if the car goes out of track if action is taken on state
-                False otherwise
-        '''
-        new_state = self.get_new_state(state, action)
-        old_cell, new_cell = state[0:2], new_state[0:2]
-
-        if new_cell[0] < 0 or new_cell[0] >= self.rows or new_cell[1] < 0 or new_cell[1] >= self.cols:
-            return True
-
-        else:
-            return self.layout.racetrack[new_cell[0]][new_cell[1]] == -1

@@ -32,7 +32,7 @@ class DQNBaselineAgent(Agent):
 
     def getAction(self, state):
         if np.random.rand() < self.epsilon:
-            action = np.random.randint(9)
+            action = np.random.randint(self.nb_actions)
             return self.map_to_2D(action)
 
         qValues = self.Agent.getQValues(state)

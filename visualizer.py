@@ -56,18 +56,18 @@ class Visualizer:
         self.display.fill(0)
         for i in range(self.rows):
             for j in range(self.cols):
-                if self.layout.racetrack[i][j] == START_CELL:
-                    color = GREEN
-                elif self.layout.racetrack[i][j] == WALL_CELL:
+                if self.layout.racetrack[i][j] == WALL_CELL:
                     color = RED
                 elif self.layout.racetrack[i][j] == FINISH_CELL:
                     color = BLUE
+                # elif self.layout.racetrack[i][j] == START_CELL:
+                #     color = GREEN
                 else:
                     color = BLACK
-                pygame.draw.rect(self.display, color, ((i*self.cell_edge,j*self.cell_edge), self.blockSize), 1)
+                pygame.draw.rect(self.display, color, ((i*self.cell_edge,(self.cols - j - 1)*self.cell_edge), self.blockSize), 1)
 
         if len(state)>0:
-            pygame.draw.rect(self.display, WHITE ,((state[0]*self.cell_edge, state[1]*self.cell_edge), self.blockSize), 0)
+            pygame.draw.rect(self.display, WHITE ,((state[0] * self.cell_edge, (self.cols - state[1] - 1) * self.cell_edge), self.blockSize), 0)
 
         pygame.display.update()
 
