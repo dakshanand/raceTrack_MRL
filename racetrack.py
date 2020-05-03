@@ -46,7 +46,8 @@ print "start_state", state
 # ################################################################################
 import time
 from qLearningAgents import *
-agent = DQNBaselineAgent()
+# agent = DQNBaselineAgent()
+agent = HierarchicalDDPGAgent()
 reward = -1
 action = (1,1)
 numEpisodes = 1000
