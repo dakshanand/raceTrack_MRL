@@ -41,6 +41,11 @@ class Environment:
         state[0], state[1] = random.choice(self.layout.startStates)
         return state
 
+    def getShapedReward(self, state, nextState):
+        del_dist = self.dist[int(state[0])][int(state[1])] - self.dist[int(nextState[0])][int(nextState[1])]
+        shapedReward = del_dist * REWARD_SHAPING_SCALE
+        return shapedReward
+
     def step(self, state, action):
         '''
         Returns the reward and new state when action is taken on state
@@ -50,20 +55,20 @@ class Environment:
         Ends the episode by returning reward as None
         and state as usual (which will be terminating)
         '''
+        nextState = np.zeros(4,dtype='float')
         reward = TIME_STEP_PENALTY
         done = False
         self.step_count += 1
         status, final_pos = self.move_the_car(np.array(state[:2]), np.array(state[2:4]))
-        del_dist = self.dist[int(state[0])][int(state[1])] - self.dist[int(final_pos[0])][int(final_pos[1])]
 
         # print state[:2], final_pos, del_dist
-        state[:2] = final_pos
+        nextState[:2] = final_pos
 
         if status == 'collision':
             accx = self.get_deacceleration(state[2])
             accy = self.get_deacceleration(state[3])
             acceleration = np.array([accx, accy])
-            state[2:4] = self.update_velocity(state[2:4], acceleration)
+            nextState[2:4] = self.update_velocity(state[2:4], acceleration)
             reward += COLLISION_PENALTY
         elif status == 'finish':
             reward += FINISH_REWARD
@@ -71,11 +76,9 @@ class Environment:
         else:
             acceleration = self.noisy_action(action)
             acceleration = action
-            state[2:4] = self.update_velocity(state[2:4], acceleration)
+            nextState[2:4] = self.update_velocity(state[2:4], acceleration)
 
-        reward += del_dist * REWARD_SHAPING_SCALE
-
-        return state, reward, done
+        return nextState, reward, done
 
     def move_the_car(self, initial_pos, velocity_vector):
         if (abs(velocity_vector[0]) <= 0.0001) and (abs(velocity_vector[1]) <= 0.0001):

@@ -50,19 +50,25 @@ agent = DQNBaselineAgent()
 reward = -1
 action = (1,1)
 numEpisodes = 1000
+totalSteps = 0
+episodeSteps = 0
 trainingRewards = []
+
 for episode in range(numEpisodes):
+    totalSteps += episodeSteps
     episodeReward = 0
     episodeSteps = 0
     while 1:
+        episodeReward += reward
+        episodeSteps += 1
+
         action = agent.getAction(state)
         # print state, action
         nextState, reward, done = env.step(state, action)
-        episodeReward += reward
-        episodeSteps += 1
-        agent.update(state, action, nextState, reward, done)
-        state = nextState
-        if done or episodeSteps > 1000:
+        shapedReward = env.getShapedReward(state, nextState)
+        agent.update(state, action, nextState, (reward + shapedReward), done)
+
+        if done or episodeSteps > 200:
             if done:
                 print "---------------------------------DONE--------------------------------"
             else:
@@ -72,9 +78,10 @@ for episode in range(numEpisodes):
             state = env.start()
             trainingRewards.append(episodeReward)
             if episode % 10 == 0 and episode:
-                print trainingRewards
+                print trainingRewards, totalSteps
             # time.sleep(2)
             break
-        if episode > 50:
-            print state, nextState, action, reward
-            vis.visualize_racetrack(state)
+        # if episode > 100:
+        #     print state, nextState, action, reward
+        state = nextState
+#            vis.visualize_racetrack(state)
