@@ -13,19 +13,19 @@ import pickle
 
 import layout_parser
 from variables import *
-
+from environment import *
 class Environment:
     '''
         Assumption: The car keeps on moving with the current
         velocity and then action is applied to
     '''
 
+    dist = pickle.load( open( "dist.p", "rb" ) )
     def __init__(self, layout):
         '''
         initialize step_count to be 0
         '''
         self.layout = layout
-        self.dist = pickle.load( open( "dist.p", "rb" ) )
         self.rows = self.layout.racetrack.width
         self.cols = self.layout.racetrack.height
         self.max_vel_mag = 3
@@ -41,8 +41,9 @@ class Environment:
         state[0], state[1] = random.choice(self.layout.startStates)
         return state
 
-    def getShapedReward(self, state, nextState):
-        del_dist = self.dist[int(state[0])][int(state[1])] - self.dist[int(nextState[0])][int(nextState[1])]
+    @staticmethod
+    def getShapedReward(state, nextState):
+        del_dist = Environment.dist[int(state[0])][int(state[1])] - Environment.dist[int(nextState[0])][int(nextState[1])]
         shapedReward = del_dist * REWARD_SHAPING_SCALE
         return shapedReward
 
