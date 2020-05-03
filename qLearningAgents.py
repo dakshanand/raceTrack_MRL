@@ -39,16 +39,16 @@ class DQNBaselineAgent(Agent):
         action = np.argmax(qValues)
         return self.map_to_2D(action)
 
-    def update(self, state, action, nextState, reward):
+    def update(self, state, action, nextState, reward, done):
         if self.epsilon > self.min_epsilon:
             self.epsilon *= self.decay
-        self.Agent.update(state, self.map_to_1D(action), nextState, reward/50.0, done = 0)
+        self.Agent.update(state, self.map_to_1D(action), nextState, reward/50.0, done)
 
 class DqnModule():
     '''
         This class only deals with numerical actions
     '''
-    def __init__(self, featureExtractor, nb_features, batch_size = 32, discount = 0.8, nb_actions = 9):
+    def __init__(self, featureExtractor, nb_features, batch_size = 32, discount = 0.9, nb_actions = 9):
         self.batch_size = batch_size
         self.discount = discount
         self.nb_actions = nb_actions
