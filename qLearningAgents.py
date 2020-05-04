@@ -420,3 +420,105 @@ class DDPGModule:
             return action
         action = self.actor_model.predict(state)
         return action
+
+class GmQAgent(Agent):
+    def __init__(self, **args):
+        Agent.__init__(self, **args)
+        self.nb_finishFeatures = 4
+        self.nb_collisionFeatures = 4
+        self.nb_actions = 5
+        self.nb_features = 4
+        self.epsilon = 1
+        self.min_epsilon = 0.01
+        self.decay = .999
+        self.finishAgent = DqnModule(nb_features = self.nb_finishFeatures, featureExtractor = simpleExtractor)
+        self.collisionAgent = DqnModule(nb_features = self.nb_collisionFeatures, featureExtractor = simpleExtractor)
+        # self.subModules = [self.ghostAgent, self.foodAgent, self.puddleAgent]
+        self.lastSavedWeights = -1
+        # self.foodAgent.model = self.loadModel(name)
+        # self.ghostAgent.model = self.loadModel(name)
+        self.isSaved = 0
+
+        # print '----------'
+        # print '############ GmQAgent ############'
+        # print 'Epsilon Decay = %s, Discount Factor = %.2f' % (self.decay, self.discount)
+        # print 'Feature Count: Ghost = %d, Food = %d' % (self.nb_ghostFeatures, self.nb_foodFeatures)
+        # print 'Rewards for foodAgent: Time Penalty = %.2f, (Food Reward + Time Penalty) = %.2f, \
+        # (Food Reward + Time Penalty + LastReward) = %.2f' % (self.getFoodReward(TIME_PENALTY), \
+        # self.getFoodReward(TIME_PENALTY + FOOD_REWARD), self.getFoodReward(TIME_PENALTY + FOOD_REWARD + EAT_ALL_FOOD_REWARD))
+        # print 'Rewards for ghostAgent: Time Penalty = %.2f, (Death Penalty) = %.2f' % (self.getGhostReward(TIME_PENALTY), \
+        # self.getGhostReward(TIME_PENALTY + DIE_PENALTY))
+        # print '----------'
+        self.isSaved = 0
+        self.lastSavedWeights = -1
+
+    def getAction(self, state):
+
+        if np.random.rand() < self.epsilon:
+            action = np.random.randint(self.nb_actions)
+            return self.map_to_2D(action)
+        # if self.currentTrainingEpisode > 300:
+        # print state
+        # print 'action = ', scaleParameter
+
+        finishQValues = self.finishAgent.getQValues(state)
+        collisionQValues = self.collisionAgent.getQValues(state)
+        finalQValues = finishQValues + collisionQValues
+
+        bestAction = self.map_to_2D(np.argmax(finalQValues))
+        return bestAction
+
+    def saveModel(self, model, file_name):
+        model_json = model.to_json()
+        with open('weights/' + file_name + '.json', "w") as json_file:
+            json_file.write(model_json)
+        model.save_weights('weights/' + file_name + '.h5')
+
+    def loadModel(self, file_name):
+        json_file = open('weights/' + file_name + '.json', 'r')
+        loaded_model_json = json_file.read()
+        json_file.close()
+        loaded_model = model_from_json(loaded_model_json)
+        loaded_model.load_weights('weights/' + file_name + '.h5')
+        return loaded_model
+
+    def getFinishReward(self, reward, shapedReward):
+        if reward == TIME_STEP_PENALTY + FINISH_REWARD + COLLISION_PENALTY:
+            reward = TIME_STEP_PENALTY + FINISH_REWARD
+        elif reward == TIME_STEP_PENALTY + COLLISION_PENALTY:
+            reward = TIME_STEP_PENALTY
+        else:
+            pass
+
+        reward += shapedReward
+
+        return reward / 50.0
+
+    def getCollisionReward(self, reward, shapedReward):
+
+        if reward == TIME_STEP_PENALTY + FINISH_REWARD + COLLISION_PENALTY:
+            reward = -TIME_STEP_PENALTY + COLLISION_PENALTY
+        elif reward == TIME_STEP_PENALTY + COLLISION_PENALTY:
+            reward = -TIME_STEP_PENALTY + COLLISION_PENALTY
+        else:
+            reward = -TIME_STEP_PENALTY
+
+        return reward / 50.0
+
+    def update(self, state, action, nextState, reward, done):
+        # if self.selfTesting and self.currentTrainingEpisode > self.lastSavedWeights:
+        #     # self.saveModel(self.ghostAgent.model, 'ghostAgent_' + identifier + '_' + str(self.currentTrainingEpisode))
+        #     # self.saveModel(self.foodAgent.model, 'foodAgent_' + identifier + '_' + str(self.currentTrainingEpisode))
+        #     # self.saveModel(self.puddleAgent.model, 'puddleAgent_' + identifier + '_' + str(self.currentTrainingEpisode))
+        #     self.lastSavedWeights = self.currentTrainingEpisode
+        #
+        # if self.alpha < 0.0001:
+        #     return
+
+        if self.epsilon > self.min_epsilon:
+            self.epsilon = self.epsilon * self.decay
+
+        action = self.map_to_1D(action)
+        shapedReward = Environment.getShapedReward(state, nextState)
+        self.finishAgent.update(state, action, nextState, self.getFinishReward(reward - shapedReward, shapedReward), done)
+        self.collisionAgent.update(state, action, nextState, self.getCollisionReward(reward - shapedReward, shapedReward), done)

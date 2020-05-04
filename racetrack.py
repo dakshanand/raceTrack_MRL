@@ -47,7 +47,8 @@ print "start_state", state
 import time
 from qLearningAgents import *
 # agent = DQNBaselineAgent()
-agent = HierarchicalDDPGAgent()
+# agent = HierarchicalDDPGAgent()
+agent = GmQAgent()
 reward = -1
 action = (1,1)
 numEpisodes = 1000
@@ -82,7 +83,7 @@ for episode in range(numEpisodes):
                 print trainingRewards, totalSteps
             # time.sleep(2)
             break
-        # if episode > 100:
+        # if episode > 0:
+        #     vis.visualize_racetrack(state)
         #     print state, nextState, action, reward
         state = nextState
-#            vis.visualize_racetrack(state)
