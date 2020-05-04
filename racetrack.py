@@ -1,29 +1,28 @@
 # coding: utf-8
 
 import math
+import time
 import random
 import numpy as np
 
 import layout_parser
 from variables import *
+from qLearningAgents import *
 from visualizer import Visualizer
 from environment import Environment
 
 layout_name = 'f1'
 layout = layout_parser.getLayout( layout_name )
-# print layout.racetrack
-# print layout
-vis = Visualizer(layout)
+visuals = Visualizer(layout)
 env = Environment(layout)
-
-env.reset()
-state = env.start()
-print "start_state", state
+agent = GmQAgent()
 
 
 # ################################################################################
 # ################################################################################
 #
+# env.reset()
+# state = env.start()
 # done = False
 # reward = -1
 # action = (1,1)
@@ -40,50 +39,66 @@ print "start_state", state
 #     # action = (1,1)
 #     # print 'state', state, 'action', action
 #     for i in range(100000): pass
-#     vis.visualize_racetrack(state)
+#     visuals.visualize_racetrack(state)
 #
 # ################################################################################
 # ################################################################################
-import time
-from qLearningAgents import *
 # agent = DQNBaselineAgent()
 # agent = HierarchicalDDPGAgent()
-agent = GmQAgent()
-reward = -1
-action = (1,1)
-numEpisodes = 1000
-totalSteps = 0
-episodeSteps = 0
-trainingRewards = []
 
-for episode in range(numEpisodes):
-    totalSteps += episodeSteps
-    episodeReward = 0
-    episodeSteps = 0
-    while 1:
-        episodeReward += reward
-        episodeSteps += 1
-
+def run_episode(agent, env, visuals, testing = False):
+    env.reset()
+    state = env.start()
+    episode_score, episode_steps = 0, 0
+    gameOver, done = False, False
+    while not gameOver:
+        episode_steps += 1
         action = agent.getAction(state)
-        # print state, action
-        nextState, reward, done = env.step(state, action)
-        shapedReward = env.getShapedReward(state, nextState)
-        agent.update(state, action, nextState, (reward + shapedReward), done)
+        next_state, reward, done = env.step(state, action)
+        episode_score += reward
+        if not testing:
+            shapedReward = env.getShapedReward(state, next_state)
+            agent.update(state, action, next_state, (reward + shapedReward), done)
+        state = next_state
 
-        if done or episodeSteps > 200:
-            if done:
-                print "---------------------------------DONE--------------------------------"
-            else:
-                print "-------------------------------CRASHED-------------------------------"
-            env.reset()
-            reward = -1
-            state = env.start()
-            trainingRewards.append(episodeReward)
-            if episode % 10 == 0 and episode:
-                print trainingRewards, totalSteps
-            # time.sleep(2)
-            break
-        # if episode > 0:
-        #     vis.visualize_racetrack(state)
-        #     print state, nextState, action, reward
-        state = nextState
+        testing_limit_exceed = (episode_steps > TESTING_STEP_LIMIT) and testing
+        training_limit_exceed = (episode_steps > TRAINING_STEP_LIMIT) and not testing
+
+        gameOver = done or testing_limit_exceed or training_limit_exceed
+
+    # if done: print "-----------------------DONE-------------------------"
+    # else: print "---------------------CRASHED------------------------"
+
+    return episode_score, episode_steps, done
+
+def begin_testing(agent, env, visuals):
+    score_list = []
+    total_steps, finish_count = 0, 0
+    for test_num in range(testRepitition):
+        episode_score, episode_steps, done = run_episode(agent, env, visuals, testing = True)
+        total_steps += episode_steps
+        finish_count += done
+        score_list.append(episode_score)
+    return score_list, total_steps, finish_count
+
+
+numEpisodes = 500
+def start_it_baby():
+    training_rewards, training_steps = [], 0
+    test_scores, test_averages, test_finishes = [], [], []
+    for episode_num in range(numEpisodes):
+
+        episode_score, episode_steps, done = run_episode(agent, env, visuals)
+        training_rewards.append(episode_score)
+        training_steps += episode_steps
+
+        if ((episode_num+1) % testInterval == 0) and episode_num > START_TESTING_FROM:
+            print 'Episodes Completed %d' % (episode_num)
+            print training_rewards, training_steps
+            score_list, total_steps, finish_count = begin_testing(agent, env, visuals)
+            test_scores += score_list
+            test_finishes.append(finish_count)
+            test_averages.append(sum(score_list))
+            print score_list, total_steps, finish_count
+
+start_it_baby()
