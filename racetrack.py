@@ -15,7 +15,9 @@ layout_name = 'f1'
 layout = layout_parser.getLayout( layout_name )
 visuals = Visualizer(layout)
 env = Environment(layout)
-agent = GmQAgent()
+# agent = GmQAgent()
+# agent = DQNBaselineAgent()
+agent = HierarchicalDDPGAgent()
 
 
 # ################################################################################
@@ -43,8 +45,6 @@ agent = GmQAgent()
 #
 # ################################################################################
 # ################################################################################
-# agent = DQNBaselineAgent()
-agent = HierarchicalDDPGAgent()
 
 def run_episode(agent, env, visuals, testing = False):
     env.reset()

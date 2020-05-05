@@ -136,7 +136,7 @@ class HierarchicalDDPGAgent(Agent):
         self.nb_actions = 9
         self.nb_features = 4
         self.arbitrator_actions = 2
-        self.epsilon = 1
+        self.epsilon = 0.0
         self.min_epsilon = 0.01
         self.decay = .995
         self.arbitratorDecay = .9995
@@ -164,7 +164,7 @@ class HierarchicalDDPGAgent(Agent):
     def getAction(self, state, testing):
         if not testing and (np.random.rand() < self.epsilon):
             action = np.random.randint(self.nb_actions)
-            self.arbitratorAction = -1
+            self.arbitratorAction = [-1, -1]
             return self.map_to_2D(action)
         self.arbitratorAction = self.arbitrator.getAction(state, testing)[0]
         scaleParameters = self.arbitratorAction
@@ -207,13 +207,12 @@ class HierarchicalDDPGAgent(Agent):
         #     self.saveModel(self.arbitrator.critic_model, 'critic_' + identifier + '_' + str(self.currentTrainingEpisode))
         #     # self.saveModel(self.arbitrator.model, 'arbitrator_' + identifier + '_' + str(self.currentTrainingEpisode))
         #     self.lastSavedWeights = self.currentTrainingEpisode
-        # if self.epsilon > self.min_epsilon:
-        #     self.epsilon = self.epsilon * self.decay
-
+        if self.epsilon > self.min_epsilon:
+            self.epsilon = self.epsilon * self.decay
 
         action = self.map_to_1D(action)
         shapedReward = Environment.getShapedReward(state, nextState)
-        if self.arbitratorAction != -1:
+        if self.arbitratorAction[0] != -1:
             self.arbitrator.update(state, self.arbitratorAction, nextState, float(reward) / 50.0, done)
 
         self.finishAgent.update(state, action, nextState, self.getFinishReward(reward - shapedReward, shapedReward), done)
@@ -513,7 +512,7 @@ class TestingAgent(Agent):
         print reward
         return
 
-class TestingAgentDDPG(PacmanQAgent):
+class TestingAgentDDPG(Agent):
     def __init__(self, **args):
         Agent.__init__(self, **args)
         self.actor = self.loadModel('actor_3_1000')
