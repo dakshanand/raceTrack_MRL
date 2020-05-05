@@ -44,7 +44,7 @@ agent = GmQAgent()
 # ################################################################################
 # ################################################################################
 # agent = DQNBaselineAgent()
-# agent = HierarchicalDDPGAgent()
+agent = HierarchicalDDPGAgent()
 
 def run_episode(agent, env, visuals, testing = False):
     env.reset()

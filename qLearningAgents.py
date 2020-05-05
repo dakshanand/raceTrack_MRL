@@ -136,9 +136,9 @@ class HierarchicalDDPGAgent(Agent):
         self.nb_actions = 5
         self.nb_features = 4
         self.arbitrator_actions = 2
-        # self.epsilon = 1
-        # self.min_epsilon = 0.01
-        # self.decay = .999
+        self.epsilon = 1
+        self.min_epsilon = 0.01
+        self.decay = .995
         self.finishAgent = DqnModule(nb_features = self.nb_finishFeatures, featureExtractor = simpleExtractor)
         self.collisionAgent = DqnModule(nb_features = self.nb_collisionFeatures, featureExtractor = simpleExtractor)
         self.arbitrator = DDPGModule(nb_features = self.nb_features, featureExtractor = simpleExtractor, nb_actions = self.arbitrator_actions, decay = .9995)
@@ -162,7 +162,11 @@ class HierarchicalDDPGAgent(Agent):
 
 
     def getAction(self, state, testing):
-        self.arbitratorAction = self.arbitrator.getAction(state)[0]
+        if not testing and (np.random.rand() < self.epsilon):
+            action = np.random.randint(self.nb_actions)
+            self.arbitratorAction = -1
+            return self.map_to_2D(action)
+        self.arbitratorAction = self.arbitrator.getAction(state, testing)[0]
         scaleParameters = self.arbitratorAction
 
         # if self.currentTrainingEpisode > 300:
@@ -227,7 +231,9 @@ class HierarchicalDDPGAgent(Agent):
 
         action = self.map_to_1D(action)
         shapedReward = Environment.getShapedReward(state, nextState)
-        self.arbitrator.update(state, self.arbitratorAction, nextState, float(reward) / 50.0, done)
+        if self.arbitratorAction != -1:
+            self.arbitrator.update(state, self.arbitratorAction, nextState, float(reward) / 50.0, done)
+
         self.finishAgent.update(state, action, nextState, self.getFinishReward(reward - shapedReward, shapedReward), done)
         self.collisionAgent.update(state, action, nextState, self.getCollisionReward(reward - shapedReward, shapedReward), done)
 
@@ -238,7 +244,7 @@ class DDPGModule:
         self.alpha = 0.0001
         self.epsilon = .9
         self.min_epsilon = .01
-        self.gamma = .8
+        self.gamma = .9
         self.tau   = .01
         self.batch_size = 32
         self.extractor = featureExtractor
@@ -410,7 +416,6 @@ class DDPGModule:
     def getAction(self, state, testing):
         state = self.extractor(state).reshape((1, self.nb_features))
         if not testing and (np.random.random() < self.epsilon):
-            # noise = self.random_process.sample()
             noise = np.random.uniform(size = self.nb_actions)
             clipped_noise = np.clip(noise, -1.0, 1.0)
             action = self.actor_model.predict(state) + clipped_noise
