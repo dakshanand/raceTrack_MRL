@@ -82,7 +82,7 @@ def begin_testing(agent, env, visuals):
     return score_list, total_steps, finish_count
 
 
-numEpisodes = 500
+numEpisodes = 2000
 def start_it_baby():
     training_rewards, training_steps = [], 0
     test_scores, test_averages, test_finishes = [], [], []
