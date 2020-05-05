@@ -32,8 +32,8 @@ class DQNBaselineAgent(Agent):
         self.nb_actions = 9
         self.Agent = DqnModule(featureExtractor = simpleExtractor, nb_features = self.nb_features)
 
-    def getAction(self, state):
-        if np.random.rand() < self.epsilon:
+    def getAction(self, state, testing = False):
+        if not testing and (np.random.rand() < self.epsilon):
             action = np.random.randint(self.nb_actions)
             return self.map_to_2D(action)
 
@@ -161,7 +161,7 @@ class HierarchicalDDPGAgent(Agent):
         # print '----------'
 
 
-    def getAction(self, state):
+    def getAction(self, state, testing):
         self.arbitratorAction = self.arbitrator.getAction(state)[0]
         scaleParameters = self.arbitratorAction
 
@@ -191,7 +191,6 @@ class HierarchicalDDPGAgent(Agent):
         return loaded_model
 
     def getFinishReward(self, reward, shapedReward):
-
         if reward == TIME_STEP_PENALTY + FINISH_REWARD + COLLISION_PENALTY:
             reward = TIME_STEP_PENALTY + FINISH_REWARD
         elif reward == TIME_STEP_PENALTY + COLLISION_PENALTY:
@@ -204,7 +203,6 @@ class HierarchicalDDPGAgent(Agent):
         return reward / 50.0
 
     def getCollisionReward(self, reward, shapedReward):
-
         if reward == TIME_STEP_PENALTY + FINISH_REWARD + COLLISION_PENALTY:
             reward = -TIME_STEP_PENALTY + COLLISION_PENALTY
         elif reward == TIME_STEP_PENALTY + COLLISION_PENALTY:
@@ -326,7 +324,8 @@ class DDPGModule:
     def update(self, state, action, nextState, reward, done):
         if self.alpha < 0.000001:
             return
-        # action = (action - 0.5) * 2
+        if self.epsilon > self.min_epsilon:
+            self.epsilon *= self.decay
         self.add_to_replay_memory(state, action, reward, nextState, done)
         self.train()
         self.update_target()
@@ -408,11 +407,9 @@ class DDPGModule:
     #                              Model Predictions                            #
     # ========================================================================= #
 
-    def getAction(self, state):
+    def getAction(self, state, testing):
         state = self.extractor(state).reshape((1, self.nb_features))
-        if self.epsilon > self.min_epsilon:
-            self.epsilon *= self.decay
-        if np.random.random() < self.epsilon:
+        if not testing and (np.random.random() < self.epsilon):
             # noise = self.random_process.sample()
             noise = np.random.uniform(size = self.nb_actions)
             clipped_noise = np.clip(noise, -1.0, 1.0)
@@ -452,9 +449,9 @@ class GmQAgent(Agent):
         self.isSaved = 0
         self.lastSavedWeights = -1
 
-    def getAction(self, state):
+    def getAction(self, state, testing):
 
-        if np.random.rand() < self.epsilon:
+        if not testing and (np.random.rand() < self.epsilon):
             action = np.random.randint(self.nb_actions)
             return self.map_to_2D(action)
         # if self.currentTrainingEpisode > 300:

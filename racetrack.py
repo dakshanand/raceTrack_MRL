@@ -53,7 +53,7 @@ def run_episode(agent, env, visuals, testing = False):
     gameOver, done = False, False
     while not gameOver:
         episode_steps += 1
-        action = agent.getAction(state)
+        action = agent.getAction(state, testing)
         next_state, reward, done = env.step(state, action)
         episode_score += reward
         if not testing:
