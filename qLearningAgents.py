@@ -133,15 +133,16 @@ class HierarchicalDDPGAgent(Agent):
         Agent.__init__(self, **args)
         self.nb_finishFeatures = 4
         self.nb_collisionFeatures = 4
-        self.nb_actions = 5
+        self.nb_actions = 9
         self.nb_features = 4
         self.arbitrator_actions = 2
         self.epsilon = 1
         self.min_epsilon = 0.01
         self.decay = .995
+        self.arbitratorDecay = .9995
         self.finishAgent = DqnModule(nb_features = self.nb_finishFeatures, featureExtractor = simpleExtractor)
         self.collisionAgent = DqnModule(nb_features = self.nb_collisionFeatures, featureExtractor = simpleExtractor)
-        self.arbitrator = DDPGModule(nb_features = self.nb_features, featureExtractor = simpleExtractor, nb_actions = self.arbitrator_actions, decay = .9995)
+        self.arbitrator = DDPGModule(nb_features = self.nb_features, featureExtractor = simpleExtractor, nb_actions = self.arbitrator_actions, decay = self.arbitratorDecay)
         # self.subModules = [self.ghostAgent, self.foodAgent, self.puddleAgent]
         self.lastSavedWeights = -1
         # self.foodAgent.model = self.loadModel(name)
@@ -160,7 +161,6 @@ class HierarchicalDDPGAgent(Agent):
         # self.getGhostReward(TIME_PENALTY + DIE_PENALTY))
         # print '----------'
 
-
     def getAction(self, state, testing):
         if not testing and (np.random.rand() < self.epsilon):
             action = np.random.randint(self.nb_actions)
@@ -168,10 +168,6 @@ class HierarchicalDDPGAgent(Agent):
             return self.map_to_2D(action)
         self.arbitratorAction = self.arbitrator.getAction(state, testing)[0]
         scaleParameters = self.arbitratorAction
-
-        # if self.currentTrainingEpisode > 300:
-        # print state
-        # print 'action = ', scaleParameter
 
         finishQValues = self.finishAgent.getQValues(state)
         collisionQValues = self.collisionAgent.getQValues(state)
@@ -414,7 +410,7 @@ class GmQAgent(Agent):
         Agent.__init__(self, **args)
         self.nb_finishFeatures = 4
         self.nb_collisionFeatures = 4
-        self.nb_actions = 5
+        self.nb_actions = 9
         self.nb_features = 4
         self.epsilon = 1
         self.min_epsilon = 0.01
