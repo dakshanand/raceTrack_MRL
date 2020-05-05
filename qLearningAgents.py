@@ -180,20 +180,6 @@ class HierarchicalDDPGAgent(Agent):
         bestAction = self.map_to_2D(np.argmax(scalarizedQValues))
         return bestAction
 
-    def saveModel(self, model, file_name):
-        model_json = model.to_json()
-        with open('weights/' + file_name + '.json', "w") as json_file:
-            json_file.write(model_json)
-        model.save_weights('weights/' + file_name + '.h5')
-
-    def loadModel(self, file_name):
-        json_file = open('weights/' + file_name + '.json', 'r')
-        loaded_model_json = json_file.read()
-        json_file.close()
-        loaded_model = model_from_json(loaded_model_json)
-        loaded_model.load_weights('weights/' + file_name + '.h5')
-        return loaded_model
-
     def getFinishReward(self, reward, shapedReward):
         if reward == TIME_STEP_PENALTY + FINISH_REWARD + COLLISION_PENALTY:
             reward = TIME_STEP_PENALTY + FINISH_REWARD
@@ -470,20 +456,6 @@ class GmQAgent(Agent):
         bestAction = self.map_to_2D(np.argmax(finalQValues))
         return bestAction
 
-    def saveModel(self, model, file_name):
-        model_json = model.to_json()
-        with open('weights/' + file_name + '.json', "w") as json_file:
-            json_file.write(model_json)
-        model.save_weights('weights/' + file_name + '.h5')
-
-    def loadModel(self, file_name):
-        json_file = open('weights/' + file_name + '.json', 'r')
-        loaded_model_json = json_file.read()
-        json_file.close()
-        loaded_model = model_from_json(loaded_model_json)
-        loaded_model.load_weights('weights/' + file_name + '.h5')
-        return loaded_model
-
     def getFinishReward(self, reward, shapedReward):
         if reward == TIME_STEP_PENALTY + FINISH_REWARD + COLLISION_PENALTY:
             reward = TIME_STEP_PENALTY + FINISH_REWARD
@@ -524,3 +496,49 @@ class GmQAgent(Agent):
         shapedReward = Environment.getShapedReward(state, nextState)
         self.finishAgent.update(state, action, nextState, self.getFinishReward(reward - shapedReward, shapedReward), done)
         self.collisionAgent.update(state, action, nextState, self.getCollisionReward(reward - shapedReward, shapedReward), done)
+
+class TestingAgent(Agent):
+    def __init__(self, **args):
+        Agent.__init__(self, **args)
+        self.finishAgent = self.loadModel('')
+        self.collisionAgent = self.loadModel('')
+
+    def computeActionFromQValues(self, state):
+        finishFeatures = simpleExtractor(state)
+        qValues1 = self.finishAgent.predict(np.array([finishFeatures]), batch_size=1)[0]
+        collisionFeatures = simpleExtractor(state)
+        qValues2 = self.collisionAgent.predict(np.array([collisionFeatures]), batch_size=1)[0]
+        qValues = (qValues1 + qValues2)
+        bestAction = ActionMapping.NumbertoAction[np.argmax(qValues)]
+        print qValues, bestAction
+        return bestAction
+
+    def update(self, state, action, nextState, reward):
+        print reward
+        return
+
+class TestingAgentDDPG(PacmanQAgent):
+    def __init__(self, **args):
+        Agent.__init__(self, **args)
+        self.actor = self.loadModel('actor_3_1000')
+
+        self.finishAgent = self.loadModel('')
+        self.collisionAgent = self.loadModel('')
+
+    def computeActionFromQValues(self, state):
+
+        # ddpgState = CustomizedExtractor().getFeatures(state).reshape((1, 26))
+        ddpgState = simpleExtractor(state)
+
+        scaleParameters = self.actor.predict(ddpgState)[0]
+        finishFeatures = simpleExtractor(state)
+        finishQValues = self.finishAgent.predict(np.array([finishFeatures]), batch_size=1)[0]
+        collisionFeatures = simpleExtractor(state)
+        collisionQValues = self.collisionAgent.predict(np.array([collisionFeatures]), batch_size=1)[0]
+        qValues = scaleParameters[0] * finishQValues + scaleParameters[1] * collisionQValues
+
+        bestAction = ActionMapping.NumbertoAction[np.argmax(qValues)]
+        return bestAction
+
+    def update(self, state, action, nextState, reward):
+        return
