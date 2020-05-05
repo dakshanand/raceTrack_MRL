@@ -9,6 +9,8 @@ TRAINING_STEP_LIMIT = 200
 TESTING_STEP_LIMIT = 200
 START_TESTING_FROM = 50
 
+CENTER_CELL = [22,25]
+
 START_CELL  = 1 # .lay file represents it by #
 WALL_CELL   = 2 # .lay file represents it by %
 FINISH_CELL = 3 # .lay file represents it by .

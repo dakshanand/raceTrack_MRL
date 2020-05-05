@@ -43,9 +43,17 @@ class Environment:
 
     @staticmethod
     def getShapedReward(state, nextState):
-        del_dist = Environment.dist[int(state[0])][int(state[1])] - Environment.dist[int(nextState[0])][int(nextState[1])]
-        shapedReward = del_dist * REWARD_SHAPING_SCALE
-        return shapedReward
+        a = state[:2]
+        c = nextState[:2]
+        b = CENTER_CELL
+        ang = math.degrees(math.atan2(c[1]-b[1], c[0]-b[0]) - math.atan2(a[1]-b[1], a[0]-b[0]))
+        return ang
+
+    # @staticmethod
+    # def getShapedReward(state, nextState):
+    #     del_dist = Environment.dist[int(state[0])][int(state[1])] - Environment.dist[int(nextState[0])][int(nextState[1])]
+    #     shapedReward = del_dist * REWARD_SHAPING_SCALE
+    #     return shapedReward
 
     def step(self, state, action):
         '''
