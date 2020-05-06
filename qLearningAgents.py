@@ -21,6 +21,7 @@ from abstractAgent import Agent
 from featureExtractors import *
 from environment import *
 
+identifier = ''
 
 class DQNBaselineAgent(Agent):
     def __init__(self, **args):
@@ -30,15 +31,20 @@ class DQNBaselineAgent(Agent):
         self.decay = 0.9995
         self.nb_features = 4
         self.nb_actions = 9
-        self.discount = .85
+        self.discount = .95
         self.Agent = DqnModule(featureExtractor = simpleExtractor, nb_features = self.nb_features, discount = self.discount)
         print '----------'
         print '############ DQNBaselineAgent ############'
         print 'Epsilon Decay = %s, Discount Factor = %.2f' % (self.decay, self.discount)
         print '----------'
+        self.last_saved_num = -1
 
 
     def getAction(self, state, testing = False):
+        if testing and self.training_episode_num > self.last_saved_num:
+            self.saveModel(self.Agent.model, 'DQNBaselineAgent_' + identifier + '_' + str(self.training_episode_num))
+            self.last_saved_num = self.training_episode_num
+
         if not testing and (np.random.rand() < self.epsilon):
             action = np.random.randint(self.nb_actions)
             return self.map_to_2D(action)
@@ -133,7 +139,6 @@ class DqnModule():
         next_states = np.squeeze(next_states)
         return np.squeeze(states), actions, rewards, next_states, done_list
 
-
 class HierarchicalDDPGAgent(Agent):
     def __init__(self, **args):
         Agent.__init__(self, **args)
@@ -142,32 +147,31 @@ class HierarchicalDDPGAgent(Agent):
         self.nb_actions = 9
         self.nb_features = 4
         self.arbitrator_actions = 2
-        self.epsilon = 0.0
+        self.epsilon = 1.
         self.min_epsilon = 0.01
         self.decay = .995
+        self.discount = .9
         self.arbitratorDecay = .9995
-        self.finishAgent = DqnModule(nb_features = self.nb_finishFeatures, featureExtractor = simpleExtractor)
-        self.collisionAgent = DqnModule(nb_features = self.nb_collisionFeatures, featureExtractor = simpleExtractor)
+        self.finishAgent = DqnModule(nb_features = self.nb_finishFeatures, featureExtractor = simpleExtractor, discount = self.discount)
+        self.collisionAgent = DqnModule(nb_features = self.nb_collisionFeatures, featureExtractor = simpleExtractor, discount = self.discount)
         self.arbitrator = DDPGModule(nb_features = self.nb_features, featureExtractor = simpleExtractor, nb_actions = self.arbitrator_actions, decay = self.arbitratorDecay)
         # self.subModules = [self.ghostAgent, self.foodAgent, self.puddleAgent]
-        self.lastSavedWeights = -1
+        self.last_saved_num = -1
         # self.foodAgent.model = self.loadModel(name)
         # self.ghostAgent.model = self.loadModel(name)
-        self.isSaved = 0
-        # print '----------'
-        # print '############ HierarchicalDDPGAgent ############'
-        # print 'Arbitrator Epsilon Decay = %f, Discount Factor = %.2f' % (self.arbitrator.decay, self.discount)
-        # print 'Feature Count: Arbitrator = %d, Ghost = %d, Food = %d' % (self.nb_features, self.nb_ghostFeatures, self.nb_foodFeatures)
-        # print 'Rewards for Arbitrator: (Eat ghost) = %.2f, (Eat Food) = %.2f, (Death Penalty) = %.2f, (Time Penalty) = %.2f' % \
-        # (self.getArbitratorReward(50), self.getArbitratorReward(10), self.getArbitratorReward(-500), self.getArbitratorReward(-1))
-        # print 'Rewards for foodAgent: Time Penalty = %.2f, (Food Reward + Time Penalty) = %.2f, \
-        # (Food Reward + Time Penalty + LastReward) = %.2f' % (self.getFoodReward(TIME_PENALTY), \
-        # self.getFoodReward(TIME_PENALTY + FOOD_REWARD), self.getFoodReward(TIME_PENALTY + FOOD_REWARD + EAT_ALL_FOOD_REWARD))
-        # print 'Rewards for ghostAgent: Time Penalty = %.2f, (Death Penalty) = %.2f' % (self.getGhostReward(TIME_PENALTY), \
-        # self.getGhostReward(TIME_PENALTY + DIE_PENALTY))
-        # print '----------'
+        print '----------'
+        print '############ HierarchicalDDPGAgent ############'
+        print 'Arbitrator Epsilon Decay = %f, Discount Factor = %.2f' % (self.arbitrator.decay, self.discount)
+        print '----------'
 
     def getAction(self, state, testing):
+        if testing and self.training_episode_num > self.last_saved_num:
+            self.saveModel(self.finishAgent.model, 'ghostAgent_' + identifier + '_' + str(self.training_episode_num))
+            self.saveModel(self.collisionAgent.model, 'foodAgent_' + identifier + '_' + str(self.training_episode_num))
+            self.saveModel(self.arbitrator.actor_model, 'actor_' + identifier + '_' + str(self.training_episode_num))
+            self.saveModel(self.arbitrator.critic_model, 'critic_' + identifier + '_' + str(self.training_episode_num))
+            self.last_saved_num = self.training_episode_num
+
         if not testing and (np.random.rand() < self.epsilon):
             action = np.random.randint(self.nb_actions)
             self.arbitratorAction = [-1, -1]
@@ -205,14 +209,6 @@ class HierarchicalDDPGAgent(Agent):
         return reward / 50.0
 
     def update(self, state, action, nextState, reward, done):
-        # if self.selfTesting and self.currentTrainingEpisode > self.lastSavedWeights:
-        #     self.saveModel(self.ghostAgent.model, 'ghostAgent_' + identifier + '_' + str(self.currentTrainingEpisode))
-        #     self.saveModel(self.foodAgent.model, 'foodAgent_' + identifier + '_' + str(self.currentTrainingEpisode))
-        #     self.saveModel(self.puddleAgent.model, 'puddleAgent_' + identifier + '_' + str(self.currentTrainingEpisode))
-        #     self.saveModel(self.arbitrator.actor_model, 'actor_' + identifier + '_' + str(self.currentTrainingEpisode))
-        #     self.saveModel(self.arbitrator.critic_model, 'critic_' + identifier + '_' + str(self.currentTrainingEpisode))
-        #     # self.saveModel(self.arbitrator.model, 'arbitrator_' + identifier + '_' + str(self.currentTrainingEpisode))
-        #     self.lastSavedWeights = self.currentTrainingEpisode
         if self.epsilon > self.min_epsilon:
             self.epsilon = self.epsilon * self.decay
 
@@ -420,35 +416,29 @@ class GmQAgent(Agent):
         self.epsilon = 1
         self.min_epsilon = 0.01
         self.decay = .999
-        self.finishAgent = DqnModule(nb_features = self.nb_finishFeatures, featureExtractor = simpleExtractor)
-        self.collisionAgent = DqnModule(nb_features = self.nb_collisionFeatures, featureExtractor = simpleExtractor)
+        self.discount = .9
+        self.finishAgent = DqnModule(nb_features = self.nb_finishFeatures, featureExtractor = simpleExtractor, discount = self.discount)
+        self.collisionAgent = DqnModule(nb_features = self.nb_collisionFeatures, featureExtractor = simpleExtractor, discount = self.discount)
         # self.subModules = [self.ghostAgent, self.foodAgent, self.puddleAgent]
-        self.lastSavedWeights = -1
+        self.last_saved_num = -1
         # self.foodAgent.model = self.loadModel(name)
         # self.ghostAgent.model = self.loadModel(name)
-        self.isSaved = 0
 
-        # print '----------'
-        # print '############ GmQAgent ############'
-        # print 'Epsilon Decay = %s, Discount Factor = %.2f' % (self.decay, self.discount)
-        # print 'Feature Count: Ghost = %d, Food = %d' % (self.nb_ghostFeatures, self.nb_foodFeatures)
-        # print 'Rewards for foodAgent: Time Penalty = %.2f, (Food Reward + Time Penalty) = %.2f, \
-        # (Food Reward + Time Penalty + LastReward) = %.2f' % (self.getFoodReward(TIME_PENALTY), \
-        # self.getFoodReward(TIME_PENALTY + FOOD_REWARD), self.getFoodReward(TIME_PENALTY + FOOD_REWARD + EAT_ALL_FOOD_REWARD))
-        # print 'Rewards for ghostAgent: Time Penalty = %.2f, (Death Penalty) = %.2f' % (self.getGhostReward(TIME_PENALTY), \
-        # self.getGhostReward(TIME_PENALTY + DIE_PENALTY))
-        # print '----------'
-        self.isSaved = 0
-        self.lastSavedWeights = -1
+        print '----------'
+        print '############ GmQAgent ############'
+        print 'Epsilon Decay = %s, Discount Factor = %.2f' % (self.decay, self.discount)
+        print '----------'
+        self.last_saved_num = -1
 
     def getAction(self, state, testing):
+        if testing and self.training_episode_num > self.last_saved_num:
+            self.saveModel(self.finishAgent.model, 'ghostAgent_' + identifier + '_' + str(self.training_episode_num))
+            self.saveModel(self.collisionAgent.model, 'foodAgent_' + identifier + '_' + str(self.training_episode_num))
+            self.last_saved_num = self.training_episode_num
 
         if not testing and (np.random.rand() < self.epsilon):
             action = np.random.randint(self.nb_actions)
             return self.map_to_2D(action)
-        # if self.currentTrainingEpisode > 300:
-        # print state
-        # print 'action = ', scaleParameter
 
         finishQValues = self.finishAgent.getQValues(state)
         collisionQValues = self.collisionAgent.getQValues(state)
@@ -481,15 +471,6 @@ class GmQAgent(Agent):
         return reward / 50.0
 
     def update(self, state, action, nextState, reward, done):
-        # if self.selfTesting and self.currentTrainingEpisode > self.lastSavedWeights:
-        #     # self.saveModel(self.ghostAgent.model, 'ghostAgent_' + identifier + '_' + str(self.currentTrainingEpisode))
-        #     # self.saveModel(self.foodAgent.model, 'foodAgent_' + identifier + '_' + str(self.currentTrainingEpisode))
-        #     # self.saveModel(self.puddleAgent.model, 'puddleAgent_' + identifier + '_' + str(self.currentTrainingEpisode))
-        #     self.lastSavedWeights = self.currentTrainingEpisode
-        #
-        # if self.alpha < 0.0001:
-        #     return
-
         if self.epsilon > self.min_epsilon:
             self.epsilon = self.epsilon * self.decay
 

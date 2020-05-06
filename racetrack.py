@@ -88,6 +88,7 @@ def start_it_baby():
     test_scores, test_averages, test_finishes = [], [], []
     for episode_num in range(numEpisodes):
 
+        agent.training_episode_num = episode_num
         episode_score, episode_steps, done = run_episode(agent, env, visuals)
         current_training_average += episode_score
         training_steps += episode_steps
