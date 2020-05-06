@@ -30,7 +30,13 @@ class DQNBaselineAgent(Agent):
         self.decay = 0.9995
         self.nb_features = 4
         self.nb_actions = 9
-        self.Agent = DqnModule(featureExtractor = simpleExtractor, nb_features = self.nb_features)
+        self.discount = .85
+        self.Agent = DqnModule(featureExtractor = simpleExtractor, nb_features = self.nb_features, discount = self.discount)
+        print '----------'
+        print '############ DQNBaselineAgent ############'
+        print 'Epsilon Decay = %s, Discount Factor = %.2f' % (self.decay, self.discount)
+        print '----------'
+
 
     def getAction(self, state, testing = False):
         if not testing and (np.random.rand() < self.epsilon):

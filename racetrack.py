@@ -16,8 +16,8 @@ layout = layout_parser.getLayout( layout_name )
 visuals = Visualizer(layout)
 env = Environment(layout)
 # agent = GmQAgent()
-# agent = DQNBaselineAgent()
-agent = HierarchicalDDPGAgent()
+# agent = HierarchicalDDPGAgent()
+agent = DQNBaselineAgent()
 
 
 # ################################################################################
@@ -84,21 +84,28 @@ def begin_testing(agent, env, visuals):
 
 numEpisodes = 2000
 def start_it_baby():
-    training_rewards, training_steps = [], 0
+    current_training_average, training_averages, training_steps = 0., [], 0.
     test_scores, test_averages, test_finishes = [], [], []
     for episode_num in range(numEpisodes):
 
         episode_score, episode_steps, done = run_episode(agent, env, visuals)
-        training_rewards.append(episode_score)
+        current_training_average += episode_score
         training_steps += episode_steps
 
         if ((episode_num+1) % testInterval == 0) and episode_num > START_TESTING_FROM:
-            print 'Episodes Completed %d' % (episode_num)
-            print training_rewards, training_steps
+            current_training_average /= float(testInterval)
+            training_averages.append(current_training_average)
+            print 'Episodes Completed = %d and training_steps = %d, average = %.2f' % (episode_num, training_steps, current_training_average)
+            # print training_rewards
+            current_training_average = 0.
             score_list, total_steps, finish_count = begin_testing(agent, env, visuals)
             test_scores += score_list
             test_finishes.append(finish_count)
-            test_averages.append(sum(score_list))
+            test_averages.append(sum(score_list) / float(len(score_list)))
             print score_list, total_steps, finish_count
+            print test_averages
+
+    print 'TRAINING AVERAGE', training_averages
+    print 'TESTING AVERAGE', test_averages
 
 start_it_baby()
