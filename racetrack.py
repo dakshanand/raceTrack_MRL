@@ -15,9 +15,11 @@ layout_name = 'f1'
 layout = layout_parser.getLayout( layout_name )
 visuals = Visualizer(layout)
 env = Environment(layout)
-# agent = GmQAgent()
 # agent = HierarchicalDDPGAgent()
-agent = DQNBaselineAgent()
+# agent = DQNBaselineAgent()
+# agent = GmQAgent()
+# agent = TestingAgent()
+agent = CollisionAgent(layout = layout)
 
 
 # ################################################################################
@@ -52,6 +54,9 @@ def run_episode(agent, env, visuals, testing = False):
     episode_score, episode_steps = 0, 0
     gameOver, done = False, False
     while not gameOver:
+        # for i in range(10000000):
+        #     pass
+        # visuals.visualize_racetrack(state)
         episode_steps += 1
         action = agent.getAction(state, testing)
         next_state, reward, done = env.step(state, action)

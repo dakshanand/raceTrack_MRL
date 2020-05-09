@@ -58,6 +58,55 @@ class DQNBaselineAgent(Agent):
             self.epsilon *= self.decay
         self.Agent.update(state, self.map_to_1D(action), nextState, reward/50.0, done)
 
+class CollisionAgent(Agent):
+    def __init__(self, **args):
+        Agent.__init__(self, **args)
+        self.epsilon = 1.0
+        self.min_epsilon = 0.01
+        self.decay = 0.9999
+        self.nb_features = 6
+        self.nb_actions = 9
+        self.discount = .95
+        self.Agent = DqnModule(featureExtractor = FeatureExtractor(self.layout).getCollisionFeatures, nb_features = self.nb_features, discount = self.discount)
+        print '----------'
+        print '############ CollisionAgent ############'
+        print 'Epsilon Decay = %s, Discount Factor = %.2f' % (self.decay, self.discount)
+        print '----------'
+        self.last_saved_num = -1
+
+
+    def getAction(self, state, testing = False):
+        if testing and self.training_episode_num > self.last_saved_num:
+            self.saveModel(self.Agent.model, 'CollisionAgent_' + identifier + '_' + str(self.training_episode_num))
+            self.last_saved_num = self.training_episode_num
+
+        if not testing and (np.random.rand() < self.epsilon):
+            action = np.random.randint(self.nb_actions)
+            return self.map_to_2D(action)
+
+        qValues = self.Agent.getQValues(state)
+        action = np.argmax(qValues)
+        return self.map_to_2D(action)
+
+
+    def getCollisionReward(self, reward, shapedReward):
+
+        if reward == TIME_STEP_PENALTY + FINISH_REWARD + COLLISION_PENALTY:
+            reward = -TIME_STEP_PENALTY + COLLISION_PENALTY
+        elif reward == TIME_STEP_PENALTY + COLLISION_PENALTY:
+            reward = -TIME_STEP_PENALTY + COLLISION_PENALTY
+        else:
+            reward = -TIME_STEP_PENALTY
+
+        return reward / 50.0
+
+    def update(self, state, action, nextState, reward, done):
+        if self.epsilon > self.min_epsilon:
+            self.epsilon *= self.decay
+
+        shapedReward = Environment.getShapedReward(state, nextState)
+        self.Agent.update(state, self.map_to_1D(action), nextState, self.getCollisionReward(reward - shapedReward, shapedReward), done)
+
 class DqnModule():
     '''
         This class only deals with numerical actions
@@ -415,7 +464,7 @@ class GmQAgent(Agent):
         self.nb_features = 4
         self.epsilon = 1
         self.min_epsilon = 0.01
-        self.decay = .999
+        self.decay = .9999
         self.discount = .9
         self.finishAgent = DqnModule(nb_features = self.nb_finishFeatures, featureExtractor = simpleExtractor, discount = self.discount)
         self.collisionAgent = DqnModule(nb_features = self.nb_collisionFeatures, featureExtractor = simpleExtractor, discount = self.discount)
@@ -442,7 +491,7 @@ class GmQAgent(Agent):
 
         finishQValues = self.finishAgent.getQValues(state)
         collisionQValues = self.collisionAgent.getQValues(state)
-        finalQValues = finishQValues + collisionQValues
+        finalQValues = finishQValues + 1.5 * collisionQValues
 
         bestAction = self.map_to_2D(np.argmax(finalQValues))
         return bestAction
@@ -482,21 +531,22 @@ class GmQAgent(Agent):
 class TestingAgent(Agent):
     def __init__(self, **args):
         Agent.__init__(self, **args)
-        self.finishAgent = self.loadModel('')
-        self.collisionAgent = self.loadModel('')
+        self.finishAgent = self.loadModel('ghostAgent_2_1999')
+        self.collisionAgent = self.loadModel('foodAgent_2_1999')
 
-    def computeActionFromQValues(self, state):
+    def getAction(self, state, testing):
         finishFeatures = simpleExtractor(state)
         qValues1 = self.finishAgent.predict(np.array([finishFeatures]), batch_size=1)[0]
         collisionFeatures = simpleExtractor(state)
         qValues2 = self.collisionAgent.predict(np.array([collisionFeatures]), batch_size=1)[0]
-        qValues = (qValues1 + qValues2)
-        bestAction = ActionMapping.NumbertoAction[np.argmax(qValues)]
-        print qValues, bestAction
+        qValues = (0 * qValues1 + qValues2)
+        bestAction = self.map_to_2D(np.argmax(qValues))
+        print state, bestAction
+        print qValues1
+        print qValues2
         return bestAction
 
-    def update(self, state, action, nextState, reward):
-        print reward
+    def update(self, state, action, nextState, reward, done):
         return
 
 class TestingAgentDDPG(Agent):
