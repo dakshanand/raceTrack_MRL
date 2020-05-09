@@ -15,10 +15,10 @@ layout_name = 'f1'
 layout = layout_parser.getLayout( layout_name )
 visuals = Visualizer(layout)
 env = Environment(layout)
-# agent = HierarchicalDDPGAgent()
-# agent = DQNBaselineAgent()
-# agent = GmQAgent()
-# agent = TestingAgent()
+# agent = HierarchicalDDPGAgent(layout = layout)
+# agent = DQNBaselineAgent(layout = layout)
+# agent = GmQAgent(layout = layout)
+# agent = TestingAgent(layout = layout)
 agent = CollisionAgent(layout = layout)
 
 

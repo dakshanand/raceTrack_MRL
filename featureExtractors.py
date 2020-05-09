@@ -9,20 +9,33 @@ class FeatureExtractor():
         self.rows = self.layout.racetrack.width
         self.cols = self.layout.racetrack.height
         # self.divide_factor = (self.rows * self.cols)
-        self.divide_factor = 100.
+        self.divide_all = 100.
 
-    def simpleExtractor(self, state):
-        return np.array(state)
+    def getSimplestFeatures(self, state):
+        features = util.Counter()
+        features = self.__addBasicFeatures(state, features)
+
+        features.divideAll(self.divide_all)
+        return np.array(features.values())
 
     def getCollisionFeatures(self, state):
         features = util.Counter()
-        current_pos = state[:2]
-        float_x, float_y = current_pos
+        features = self.__addBasicFeatures(state, features)
+        features = self.__addWallDistFeatures(state, features)
+
+        features.divideAll(self.divide_all)
+        return np.array(features.values())
+
+    def __addBasicFeatures(self, state, features = util.Counter()):
+        features["x"] = state[0]
+        features["y"] = state[1]
+        features["vx"] = state[2]
+        features["vy"] = state[3]
+        return features
+
+    def __addWallDistFeatures(self, state, features = util.Counter()):
+        float_x, float_y = state[:2]
         x, y = int(float_x), int(float_y)
-
-        features["x"] = float_x # / self.divide_factor
-        features["y"] = float_y # / self.divide_factor
-
 
         for i in range(self.rows):
             if self.layout.racetrack[x-i][y] == WALL_CELL:
@@ -40,6 +53,6 @@ class FeatureExtractor():
             if self.layout.racetrack[x][y-i] == WALL_CELL:
                 features["closest_down_wall"] = (float_y - y + i) # / self.divide_factor
                 break
+        # print features
 
-        features.divideAll(self.divide_factor)
-        return np.array(features.values())
+        return features

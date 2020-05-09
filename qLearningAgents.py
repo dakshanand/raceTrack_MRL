@@ -32,7 +32,7 @@ class DQNBaselineAgent(Agent):
         self.nb_features = 4
         self.nb_actions = 9
         self.discount = .95
-        self.Agent = DqnModule(featureExtractor = simpleExtractor, nb_features = self.nb_features, discount = self.discount)
+        self.Agent = DqnModule(featureExtractor = FeatureExtractor(self.layout).getSimplestFeatures, nb_features = self.nb_features, discount = self.discount)
         print '----------'
         print '############ DQNBaselineAgent ############'
         print 'Epsilon Decay = %s, Discount Factor = %.2f' % (self.decay, self.discount)
@@ -64,7 +64,7 @@ class CollisionAgent(Agent):
         self.epsilon = 1.0
         self.min_epsilon = 0.01
         self.decay = 0.9999
-        self.nb_features = 6
+        self.nb_features = 8
         self.nb_actions = 9
         self.discount = .95
         self.Agent = DqnModule(featureExtractor = FeatureExtractor(self.layout).getCollisionFeatures, nb_features = self.nb_features, discount = self.discount)
@@ -201,9 +201,9 @@ class HierarchicalDDPGAgent(Agent):
         self.decay = .995
         self.discount = .9
         self.arbitratorDecay = .9995
-        self.finishAgent = DqnModule(nb_features = self.nb_finishFeatures, featureExtractor = simpleExtractor, discount = self.discount)
-        self.collisionAgent = DqnModule(nb_features = self.nb_collisionFeatures, featureExtractor = simpleExtractor, discount = self.discount)
-        self.arbitrator = DDPGModule(nb_features = self.nb_features, featureExtractor = simpleExtractor, nb_actions = self.arbitrator_actions, decay = self.arbitratorDecay)
+        self.finishAgent = DqnModule(nb_features = self.nb_finishFeatures, featureExtractor = FeatureExtractor(self.layout).getSimplestFeatures, discount = self.discount)
+        self.collisionAgent = DqnModule(nb_features = self.nb_collisionFeatures, featureExtractor = FeatureExtractor(self.layout).getSimplestFeatures, discount = self.discount)
+        self.arbitrator = DDPGModule(nb_features = self.nb_features, featureExtractor = FeatureExtractor(self.layout).getSimplestFeatures, nb_actions = self.arbitrator_actions, decay = self.arbitratorDecay)
         # self.subModules = [self.ghostAgent, self.foodAgent, self.puddleAgent]
         self.last_saved_num = -1
         # self.foodAgent.model = self.loadModel(name)
@@ -283,11 +283,11 @@ class DDPGModule:
         self.nb_features = nb_features
         self.nb_actions = nb_actions
         self.decay = decay
-        # print '----------'
-        # print '### DDPG Module ###'
-        # print 'Epsilon Decay = %s, Discount Factor = %.2f, alpha = %f' % (self.decay, self.gamma, self.alpha)
-        # print 'Input Features = %d' % (self.nb_features)
-        # print '----------'
+        print '----------'
+        print '### DDPG Module ###'
+        print 'Epsilon Decay = %s, Discount Factor = %.2f, alpha = %f' % (self.decay, self.gamma, self.alpha)
+        print 'Input Features = %d' % (self.nb_features)
+        print '----------'
 
 		# ===================================================================== #
 		#                               Actor Model                             #
@@ -466,12 +466,9 @@ class GmQAgent(Agent):
         self.min_epsilon = 0.01
         self.decay = .9999
         self.discount = .9
-        self.finishAgent = DqnModule(nb_features = self.nb_finishFeatures, featureExtractor = simpleExtractor, discount = self.discount)
-        self.collisionAgent = DqnModule(nb_features = self.nb_collisionFeatures, featureExtractor = simpleExtractor, discount = self.discount)
-        # self.subModules = [self.ghostAgent, self.foodAgent, self.puddleAgent]
+        self.finishAgent = DqnModule(nb_features = self.nb_finishFeatures, featureExtractor = FeatureExtractor(self.layout).getSimplestFeatures, discount = self.discount)
+        self.collisionAgent = DqnModule(nb_features = self.nb_collisionFeatures, featureExtractor = FeatureExtractor(self.layout).getSimplestFeatures, discount = self.discount)
         self.last_saved_num = -1
-        # self.foodAgent.model = self.loadModel(name)
-        # self.ghostAgent.model = self.loadModel(name)
 
         print '----------'
         print '############ GmQAgent ############'
@@ -535,9 +532,9 @@ class TestingAgent(Agent):
         self.collisionAgent = self.loadModel('foodAgent_2_1999')
 
     def getAction(self, state, testing):
-        finishFeatures = simpleExtractor(state)
+        finishFeatures = FeatureExtractor(self.layout).getSimplestFeatures(state)
         qValues1 = self.finishAgent.predict(np.array([finishFeatures]), batch_size=1)[0]
-        collisionFeatures = simpleExtractor(state)
+        collisionFeatures = FeatureExtractor(self.layout).getSimplestFeatures(state)
         qValues2 = self.collisionAgent.predict(np.array([collisionFeatures]), batch_size=1)[0]
         qValues = (0 * qValues1 + qValues2)
         bestAction = self.map_to_2D(np.argmax(qValues))
