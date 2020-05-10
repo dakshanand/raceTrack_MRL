@@ -58,54 +58,62 @@ class DQNBaselineAgent(Agent):
             self.epsilon *= self.decay
         self.Agent.update(state, self.map_to_1D(action), nextState, reward/50.0, done)
 
-class CollisionAgent(Agent):
-    def __init__(self, **args):
+class SequentialArbiQAgent(Agent):
+    def __init__(self, extractor='IdentityExtractor', **args):
         Agent.__init__(self, **args)
-        self.epsilon = 1.0
-        self.min_epsilon = 0.01
-        self.decay = 0.9999
-        self.nb_features = 8
+        self.nb_features = 4
+        self.nb_finishFeatures = 4
+        self.nb_collisionFeatures = 4
         self.nb_actions = 9
-        self.discount = .95
-        self.Agent = DqnModule(featureExtractor = FeatureExtractor(self.layout).getCollisionFeatures, nb_features = self.nb_features, discount = self.discount)
-        print '----------'
-        print '############ CollisionAgent ############'
-        print 'Epsilon Decay = %s, Discount Factor = %.2f' % (self.decay, self.discount)
-        print '----------'
+        self.arbitrator_actions = 2
+        self.epsilon = 1
+        self.arbitratorEpsilon = 1
+        self.min_epsilon = 0.01
+
+        self.decay = .999
+        self.arbitratorDecay = .9995
+        self.finishDiscount = .9
+        self.collisionDiscount = .8
+        self.arbitratorDiscount = .9
+        self.finishAgent = DqnModule(nb_features = self.nb_finishFeatures, featureExtractor = FeatureExtractor(self.layout).getSimplestFeatures, discount = self.finishDiscount, nb_actions = self.nb_actions)
+        self.collisionAgent = DqnModule(nb_features = self.nb_collisionFeatures, featureExtractor = FeatureExtractor(self.layout).getSimplestFeatures, discount = self.collisionDiscount, nb_actions = self.nb_actions)
+        self.arbitrator = DqnModule(nb_features = self.nb_features, featureExtractor = FeatureExtractor(self.layout).getSimplestFeatures, discount = self.arbitratorDiscount, nb_actions = self.arbitrator_actions)
+        self.subModules = [self.finishAgent, self.collisionAgent]
         self.last_saved_num = -1
+        self.finishAgent = self.loadModel('finishAgent__19')
+        self.collisionAgent = self.loadModel('collisionAgent__19')
 
+        print '----------'
+        print '############ SequentialArbiQAgent ############'
+        print 'Arbitrator: Decay = %f, Discount Factor = %.2f' % (self.arbitratorDecay, self.arbitratorDiscount)
+        print '----------'
 
-    def getAction(self, state, testing = False):
+    def getAction(self, state, testing):
         if testing and self.training_episode_num > self.last_saved_num:
-            self.saveModel(self.Agent.model, 'CollisionAgent_' + identifier + '_' + str(self.training_episode_num))
+            self.saveModel(self.arbitrator.model, 'ArbiArbitrator_' + identifier + '_' + str(self.training_episode_num))
             self.last_saved_num = self.training_episode_num
+
+        if not testing and np.random.rand() < self.arbitratorEpsilon:
+            self.arbitratorAction = random.randrange(2)
+        else:
+            self.arbitratorAction = np.argmax(self.arbitrator.getQValues(state))
 
         if not testing and (np.random.rand() < self.epsilon):
             action = np.random.randint(self.nb_actions)
             return self.map_to_2D(action)
 
-        qValues = self.Agent.getQValues(state)
-        action = np.argmax(qValues)
-        return self.map_to_2D(action)
-
-
-    def getCollisionReward(self, reward, shapedReward):
-
-        if reward == TIME_STEP_PENALTY + FINISH_REWARD + COLLISION_PENALTY:
-            reward = -TIME_STEP_PENALTY + COLLISION_PENALTY
-        elif reward == TIME_STEP_PENALTY + COLLISION_PENALTY:
-            reward = -TIME_STEP_PENALTY + COLLISION_PENALTY
-        else:
-            reward = -TIME_STEP_PENALTY
-
-        return reward / 50.0
+        finalQValues = self.subModules[self.arbitratorAction].getQValues(state)
+        bestAction = self.map_to_2D(np.argmax(finalQValues))
+        return bestAction
 
     def update(self, state, action, nextState, reward, done):
-        if self.epsilon > self.min_epsilon:
-            self.epsilon *= self.decay
 
-        shapedReward = Environment.getShapedReward(state, nextState)
-        self.Agent.update(state, self.map_to_1D(action), nextState, self.getCollisionReward(reward - shapedReward, shapedReward), done)
+        if self.arbitratorEpsilon > self.min_epsilon:
+            self.arbitratorEpsilon = self.arbitratorEpsilon * self.arbitratorDecay
+        if self.epsilon > self.min_epsilon:
+            self.epsilon = self.epsilon * self.decay
+
+        self.arbitrator.update(state, self.arbitratorAction, nextState, reward, done)
 
 class DqnModule():
     '''
@@ -218,8 +226,8 @@ class HierarchicalDDPGAgent(Agent):
 
     def getAction(self, state, testing):
         if testing and self.training_episode_num > self.last_saved_num:
-            self.saveModel(self.finishAgent.model, 'ghostAgent_' + identifier + '_' + str(self.training_episode_num))
-            self.saveModel(self.collisionAgent.model, 'foodAgent_' + identifier + '_' + str(self.training_episode_num))
+            self.saveModel(self.finishAgent.model, 'finishAgent_' + identifier + '_' + str(self.training_episode_num))
+            self.saveModel(self.collisionAgent.model, 'collisionAgent_' + identifier + '_' + str(self.training_episode_num))
             self.saveModel(self.arbitrator.actor_model, 'actor_' + identifier + '_' + str(self.training_episode_num))
             self.saveModel(self.arbitrator.critic_model, 'critic_' + identifier + '_' + str(self.training_episode_num))
             self.last_saved_num = self.training_episode_num
@@ -485,8 +493,8 @@ class GmQAgent(Agent):
 
     def getAction(self, state, testing):
         if testing and self.training_episode_num > self.last_saved_num:
-            self.saveModel(self.finishAgent.model, 'ghostAgent_' + identifier + '_' + str(self.training_episode_num))
-            self.saveModel(self.collisionAgent.model, 'foodAgent_' + identifier + '_' + str(self.training_episode_num))
+            self.saveModel(self.finishAgent.model, 'finishAgent_' + identifier + '_' + str(self.training_episode_num))
+            self.saveModel(self.collisionAgent.model, 'collisionAgent_' + identifier + '_' + str(self.training_episode_num))
             self.last_saved_num = self.training_episode_num
 
         if not testing and (np.random.rand() < self.epsilon):
@@ -532,11 +540,60 @@ class GmQAgent(Agent):
         self.finishAgent.update(state, action, nextState, self.getFinishReward(reward - shapedReward, shapedReward), done)
         self.collisionAgent.update(state, action, nextState, self.getCollisionReward(reward - shapedReward, shapedReward), done)
 
+class CollisionAgent(Agent):
+    def __init__(self, **args):
+        Agent.__init__(self, **args)
+        self.epsilon = 1.0
+        self.min_epsilon = 0.01
+        self.decay = 0.9999
+        self.nb_features = 8
+        self.nb_actions = 9
+        self.discount = .95
+        self.Agent = DqnModule(featureExtractor = FeatureExtractor(self.layout).getCollisionFeatures, nb_features = self.nb_features, discount = self.discount)
+        print '----------'
+        print '############ CollisionAgent ############'
+        print 'Epsilon Decay = %s, Discount Factor = %.2f' % (self.decay, self.discount)
+        print '----------'
+        self.last_saved_num = -1
+
+
+    def getAction(self, state, testing = False):
+        if testing and self.training_episode_num > self.last_saved_num:
+            self.saveModel(self.Agent.model, 'CollisionAgent_' + identifier + '_' + str(self.training_episode_num))
+            self.last_saved_num = self.training_episode_num
+
+        if not testing and (np.random.rand() < self.epsilon):
+            action = np.random.randint(self.nb_actions)
+            return self.map_to_2D(action)
+
+        qValues = self.Agent.getQValues(state)
+        action = np.argmax(qValues)
+        return self.map_to_2D(action)
+
+
+    def getCollisionReward(self, reward, shapedReward):
+
+        if reward == TIME_STEP_PENALTY + FINISH_REWARD + COLLISION_PENALTY:
+            reward = -TIME_STEP_PENALTY + COLLISION_PENALTY
+        elif reward == TIME_STEP_PENALTY + COLLISION_PENALTY:
+            reward = -TIME_STEP_PENALTY + COLLISION_PENALTY
+        else:
+            reward = -TIME_STEP_PENALTY
+
+        return reward / 50.0
+
+    def update(self, state, action, nextState, reward, done):
+        if self.epsilon > self.min_epsilon:
+            self.epsilon *= self.decay
+
+        shapedReward = Environment.getShapedReward(state, nextState)
+        self.Agent.update(state, self.map_to_1D(action), nextState, self.getCollisionReward(reward - shapedReward, shapedReward), done)
+
 class TestingAgent(Agent):
     def __init__(self, **args):
         Agent.__init__(self, **args)
-        self.finishAgent = self.loadModel('ghostAgent_2_1999')
-        self.collisionAgent = self.loadModel('foodAgent_2_1999')
+        self.finishAgent = self.loadModel('')
+        self.collisionAgent = self.loadModel('')
 
     def getAction(self, state, testing):
         finishFeatures = FeatureExtractor(self.layout).getSimplestFeatures(state)

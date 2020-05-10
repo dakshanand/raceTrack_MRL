@@ -19,7 +19,8 @@ env = Environment(layout)
 # agent = DQNBaselineAgent(layout = layout)
 # agent = GmQAgent(layout = layout)
 # agent = TestingAgent(layout = layout)
-agent = CollisionAgent(layout = layout)
+# agent = CollisionAgent(layout = layout)
+agent = SequentialArbiQAgent(layout = layout)
 
 
 # ################################################################################
@@ -110,6 +111,7 @@ def start_it_baby():
             test_averages.append(sum(score_list) / float(len(score_list)))
             print score_list, total_steps, finish_count
             print test_averages
+
 
     print 'TRAINING AVERAGE', training_averages
     print 'TESTING AVERAGE', test_averages
