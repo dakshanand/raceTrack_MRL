@@ -66,11 +66,9 @@ class SequentialArbiQAgent(Agent):
         self.nb_collisionFeatures = 4
         self.nb_actions = 9
         self.arbitrator_actions = 2
-        self.epsilon = 1
         self.arbitratorEpsilon = 1
         self.min_epsilon = 0.01
 
-        self.decay = .999
         self.arbitratorDecay = .9995
         self.finishDiscount = .9
         self.collisionDiscount = .8
@@ -80,8 +78,8 @@ class SequentialArbiQAgent(Agent):
         self.arbitrator = DqnModule(nb_features = self.nb_features, featureExtractor = FeatureExtractor(self.layout).getSimplestFeatures, discount = self.arbitratorDiscount, nb_actions = self.arbitrator_actions)
         self.subModules = [self.finishAgent, self.collisionAgent]
         self.last_saved_num = -1
-        self.finishAgent = self.loadModel('finishAgent__19')
-        self.collisionAgent = self.loadModel('collisionAgent__19')
+        self.finishAgent = self.loadModel('finishAgent_2_1999')
+        self.collisionAgent = self.loadModel('collisionAgent_2_1999')
 
         print '----------'
         print '############ SequentialArbiQAgent ############'
@@ -97,10 +95,6 @@ class SequentialArbiQAgent(Agent):
             self.arbitratorAction = random.randrange(2)
         else:
             self.arbitratorAction = np.argmax(self.arbitrator.getQValues(state))
-
-        if not testing and (np.random.rand() < self.epsilon):
-            action = np.random.randint(self.nb_actions)
-            return self.map_to_2D(action)
 
         finalQValues = self.subModules[self.arbitratorAction].getQValues(state)
         bestAction = self.map_to_2D(np.argmax(finalQValues))
@@ -639,13 +633,13 @@ class CollisionAgent(Agent):
 class TestingAgent(Agent):
     def __init__(self, **args):
         Agent.__init__(self, **args)
-        self.finishAgent = self.loadModel('')
-        self.collisionAgent = self.loadModel('')
+        self.finishAgent = self.loadModel('finishAgent_2_1999')
+        self.collisionAgent = self.loadModel('collisionAgent_2_1999')
 
     def getAction(self, state, testing):
-        finishFeatures = FeatureExtractor(self.layout).getCollisionFeatures(state)
+        finishFeatures = FeatureExtractor(self.layout).getSimplestFeatures(state)
         qValues1 = self.finishAgent.predict(np.array([finishFeatures]), batch_size=1)[0]
-        collisionFeatures = FeatureExtractor(self.layout).getCollisionFeatures(state)
+        collisionFeatures = FeatureExtractor(self.layout).getSimplestFeatures(state)
         qValues2 = self.collisionAgent.predict(np.array([collisionFeatures]), batch_size=1)[0]
         qValues = (qValues1 + 0*qValues2)
         bestAction = self.map_to_2D(np.argmax(qValues))
@@ -682,60 +676,3 @@ class TestingAgentDDPG(Agent):
 
     def update(self, state, action, nextState, reward):
         return
-
-class SequentialArbiQAgent(Agent):
-    def __init__(self, extractor='IdentityExtractor', **args):
-        Agent.__init__(self, **args)
-        self.nb_collisionFeatures = 4
-        self.nb_finishFeatures = 4
-        self.nb_actions = 9
-        self.nb_features = 4
-        self.epsilon = 1
-        self.min_epsilon = 0.01
-        self.decay = .999
-        self.discount = .9
-        self.arbitratorDecay = .9995
-        self.arbitratorEpsilon = 1
-        self.finishAgent = DqnModule(nb_features = self.nb_finishFeatures, featureExtractor = FeatureExtractor(self.layout).getSimplestFeatures, discount = self.discount)
-        self.collisionAgent = DqnModule(nb_features = self.nb_collisionFeatures, featureExtractor = FeatureExtractor(self.layout).getSimplestFeatures, discount = 0.8)
-        self.arbitrator = DqnModule(nb_features = self.nb_features, featureExtractor = FeatureExtractor(self.layout).getSimplestFeatures, nb_actions = 2)
-        self.subModules = [self.finishAgent, self.collisionAgent]
-        self.lastSavedWeights = -1
-        self.finishAgent = self.loadModel('finishAgent_1_1999')
-        self.collisionAgent = self.loadModel('collisionAgent_1_1999')
-        self.isSaved = 0
-
-        print '----------'
-        print '############ SequentialArbiQAgent ############'
-        print 'Epsilon Decay = %f, Arbitrator Epsilon Decay = %f, Discount Factor = %.2f' % (self.decay, self.arbitratorDecay, self.arbitrator.discount)
-        # print 'Feature Count: Arbitrator = %d, finish = %d, collision = %d' % (self.nb_features, self.nb_finishFeatures, self.nb_collisionFeatures)
-        # print 'Rewards for Arbitrator: (Time Penalty) = %.2f, (Eat collision) = %.2f, (Die) = %.2f,  (Eat All collision) = %.2f' % \
-        # (self.getArbitratorReward(TIME_PENALTY), self.getArbitratorReward(TIME_PENALTY + collision_REWARD), self.getArbitratorReward(TIME_PENALTY + DIE_PENALTY), self.getArbitratorReward(TIME_PENALTY + EAT_ALL_collision_REWARD + collision_REWARD))
-        print '----------'
-
-
-    def getAction(self, state, testing):
-        if testing and self.training_episode_num > self.last_saved_num:
-            self.saveModel(self.finishAgent.model, 'finishAgent_' + identifier + '_' + str(self.training_episode_num))
-            self.saveModel(self.collisionAgent.model, 'collisionAgent_' + identifier + '_' + str(self.training_episode_num))
-            self.last_saved_num = self.training_episode_num
-
-        if not testing and np.random.rand() < self.arbitratorEpsilon:
-            self.arbitratorAction = random.randrange(2)
-        else:
-            self.arbitratorAction = np.argmax(self.arbitrator.getQValues(state))
-
-        if not testing and (np.random.rand() < self.epsilon):
-            action = np.random.randint(self.nb_actions)
-            return self.map_to_2D(action)
-
-        finalQValues = self.subModules[self.arbitratorAction].getQValues(state)
-        bestAction = self.map_to_2D(np.argmax(finalQValues))
-        return bestAction
-
-    def update(self, state, action, nextState, reward, done):
-
-        if self.arbitratorEpsilon > self.min_epsilon:
-            self.arbitratorEpsilon = self.arbitratorEpsilon * self.arbitratorDecay
-
-        self.arbitrator.update(state, self.arbitratorAction, nextState, reward, done)
