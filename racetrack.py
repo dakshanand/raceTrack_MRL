@@ -20,8 +20,8 @@ env = Environment(layout)
 # agent = GmQAgent(layout = layout)
 # agent = TestingAgent(layout = layout)
 # agent = CollisionAgent(layout = layout)
-agent = SequentialArbiQAgent(layout = layout)
-
+# agent = SequentialArbiQAgent(layout = layout)
+agent = SequentialDDPGAgent(layout = layout)
 
 # ################################################################################
 # ################################################################################

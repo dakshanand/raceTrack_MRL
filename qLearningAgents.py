@@ -286,6 +286,51 @@ class HierarchicalDDPGAgent(Agent):
         self.finishAgent.update(state, action, nextState, self.getFinishReward(reward - shapedReward, shapedReward), done)
         self.collisionAgent.update(state, action, nextState, self.getCollisionReward(reward - shapedReward, shapedReward), done)
 
+class SequentialDDPGAgent(Agent):
+    def __init__(self, **args):
+        Agent.__init__(self, **args)
+        self.nb_actions = 9
+        self.arbitrator_actions = 2
+        self.nb_finishFeatures = 4
+        self.nb_collisionFeatures = 4
+        self.nb_features = 4
+        self.min_epsilon = 0.01
+        self.arbitrator_epsilon = 1.
+
+        self.arbitrator_decay = .9995
+        self.arbitratorDiscount = .9
+
+        self.finishAgent = DqnModule(nb_features = self.nb_finishFeatures, featureExtractor = FeatureExtractor(self.layout).getSimplestFeatures, nb_actions = self.nb_actions)
+        self.collisionAgent = DqnModule(nb_features = self.nb_collisionFeatures, featureExtractor = FeatureExtractor(self.layout).getSimplestFeatures, nb_actions = self.nb_actions)
+        self.arbitrator = DDPGModule(nb_features = self.nb_features, featureExtractor = FeatureExtractor(self.layout).getSimplestFeatures, nb_actions = self.arbitrator_actions, discount = self.arbitratorDiscount, decay = self.arbitrator_decay)
+        self.last_saved_num = -1
+
+        self.finishAgent.model = self.loadModel('finishAgent__19')
+        self.collisionAgent.model = self.loadModel('collisionAgent__19')
+        print '----------'
+        print '############ SequentialDDPGAgent ############'
+        print 'Arbitrator Epsilon Decay = %f, Discount Factor = %.2f' % (self.arbitrator.decay, self.arbitratorDiscount)
+        print '----------'
+
+    def getAction(self, state, testing):
+        if testing and self.training_episode_num > self.last_saved_num:
+            self.saveModel(self.arbitrator.actor_model, 'SeqActor_' + identifier + '_' + str(self.training_episode_num))
+            self.saveModel(self.arbitrator.critic_model, 'SeqCritic_' + identifier + '_' + str(self.training_episode_num))
+            self.last_saved_num = self.training_episode_num
+
+        self.arbitratorAction = self.arbitrator.getAction(state, testing)[0]
+        scaleParameters = self.arbitratorAction
+
+        finishQValues = self.finishAgent.getQValues(state)
+        collisionQValues = self.collisionAgent.getQValues(state)
+        scalarizedQValues = scaleParameters[0] * finishQValues + scaleParameters[1] * collisionQValues
+
+        bestAction = self.map_to_2D(np.argmax(scalarizedQValues))
+        return bestAction
+
+    def update(self, state, action, nextState, reward, done):
+        self.arbitrator.update(state, self.arbitratorAction, nextState, float(reward) / 50., done)
+
 class DDPGModule:
     def __init__(self, nb_features, featureExtractor, nb_actions, discount, decay):
         self.sess = tf.Session()
