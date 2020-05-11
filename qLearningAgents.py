@@ -306,6 +306,23 @@ class SequentialDDPGAgent(Agent):
         print 'Arbitrator Epsilon Decay = %f, Discount Factor = %.2f' % (self.arbitrator.decay, self.arbitratorDiscount)
         print '----------'
 
+    def getActionWithQValues(self, state, testing):
+        if testing and self.training_episode_num > self.last_saved_num:
+            self.saveModel(self.arbitrator.actor_model, 'SeqActor_' + identifier + '_' + str(self.training_episode_num))
+            self.saveModel(self.arbitrator.critic_model, 'SeqCritic_' + identifier + '_' + str(self.training_episode_num))
+            self.last_saved_num = self.training_episode_num
+
+        self.arbitratorAction, q_arbi = self.arbitrator.getActionWithQValue(state, testing)
+        self.arbitratorAction = self.arbitratorAction[0]
+        scaleParameters = self.arbitratorAction
+
+        finishQValues = self.finishAgent.getQValues(state)
+        collisionQValues = self.collisionAgent.getQValues(state)
+        scalarizedQValues = scaleParameters[0] * finishQValues + scaleParameters[1] * collisionQValues
+
+        bestAction = self.map_to_2D(np.argmax(scalarizedQValues))
+        return bestAction, q_arbi, np.amax(scalarizedQValues)
+
     def getAction(self, state, testing):
         if testing and self.training_episode_num > self.last_saved_num:
             self.saveModel(self.arbitrator.actor_model, 'SeqActor_' + identifier + '_' + str(self.training_episode_num))
@@ -500,6 +517,16 @@ class DDPGModule:
     # ========================================================================= #
     #                              Model Predictions                            #
     # ========================================================================= #
+    def getActionWithQValue(self, state, testing):
+        state = self.extractor(state).reshape((1, self.nb_features))
+        if not testing and (np.random.random() < self.epsilon):
+            noise = np.random.uniform(size = self.nb_actions)
+            clipped_noise = np.clip(noise, -1.0, 1.0)
+            action = self.actor_model.predict(state) + clipped_noise
+        else:
+            action = self.actor_model.predict(state)
+        q_value = self.critic_model.predict([state, action])
+        return action, q_value[0][0]
 
     def getAction(self, state, testing):
         state = self.extractor(state).reshape((1, self.nb_features))
