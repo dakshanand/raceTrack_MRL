@@ -299,8 +299,8 @@ class SequentialDDPGAgent(Agent):
         self.arbitrator = DDPGModule(nb_features = self.nb_features, featureExtractor = FeatureExtractor(self.layout).getSimplestFeatures, nb_actions = self.arbitrator_actions, discount = self.arbitratorDiscount, decay = self.arbitrator_decay)
         self.last_saved_num = -1
 
-        self.finishAgent.model = self.loadModel('finishAgent__19')
-        self.collisionAgent.model = self.loadModel('collisionAgent__19')
+        self.finishAgent.model = self.loadModel('finishAgent_2_1999')
+        self.collisionAgent.model = self.loadModel('collisionAgent_2_1999')
         print '----------'
         print '############ SequentialDDPGAgent ############'
         print 'Arbitrator Epsilon Decay = %f, Discount Factor = %.2f' % (self.arbitrator.decay, self.arbitratorDiscount)
