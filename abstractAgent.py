@@ -74,7 +74,7 @@ class Agent:
             reward = -self.modifiedTimeCollision
 
         return reward / 50.0
-    #CONSTRUCTOR
+
     def __init__(self, layout, trialNum = -1):
         self.layout = layout
         self.trialNum = trialNum
@@ -88,6 +88,12 @@ class Agent:
 
 
     def update(self, state, action, nextState, reward):
+        pass
+
+    def getCollisionReward(self, reward, shapedReward):
+        pass
+
+    def getFinishReward(self, reward, shapedReward):
         pass
 
     def get_action(self, state):

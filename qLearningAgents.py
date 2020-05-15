@@ -31,13 +31,12 @@ class DQNBaselineAgent(Agent):
         self.nb_features = 8
         self.nb_actions = 9
         self.discount = .95
-        self.Agent = DqnModule(featureExtractor = FeatureExtractor(self.layout).getCollisionFeatures, nb_features = self.nb_features, discount = self.discount)
+        self.Agent = DqnModule(featureExtractor = FeatureExtractor(self.layout).getSimplestFeatures, nb_features = self.nb_features, discount = self.discount)
         print '----------'
         print '############ DQNBaselineAgent ############'
         print 'Epsilon Decay = %s, Discount Factor = %.2f' % (self.decay, self.discount)
         print '----------'
         self.last_saved_num = -1
-
 
     def getAction(self, state, testing = False):
         if testing and self.training_episode_num > self.last_saved_num:
@@ -707,3 +706,89 @@ class TestingAgentDDPG(Agent):
 
     def update(self, state, action, nextState, reward):
         return
+
+class DDPGGraphAgent(Agent):
+    def __init__(self, **args):
+        Agent.__init__(self, **args)
+        self.nb_actions = 9
+        self.arbitrator_actions = 2
+        self.nb_finishFeatures = 4
+        self.nb_collisionFeatures = 4
+        self.nb_features = 4
+        self.min_epsilon = 0.01
+        self.arbitrator_epsilon = 1.
+
+        self.arbitrator_decay = .9995
+        self.arbitratorDiscount = .9
+
+        self.dqnAgent = DqnModule(nb_features = self.nb_features, featureExtractor = FeatureExtractor(self.layout).getSimplestFeatures, discount = self.arbitratorDiscount, nb_actions = self.nb_actions)
+
+        self.finishAgent = DqnModule(nb_features = self.nb_finishFeatures, featureExtractor = FeatureExtractor(self.layout).getSimplestFeatures, nb_actions = self.nb_actions)
+        self.collisionAgent = DqnModule(nb_features = self.nb_collisionFeatures, featureExtractor = FeatureExtractor(self.layout).getSimplestFeatures, nb_actions = self.nb_actions)
+        self.arbitrator = DDPGModule(nb_features = self.nb_features, featureExtractor = FeatureExtractor(self.layout).getSimplestFeatures, nb_actions = self.arbitrator_actions, discount = self.arbitratorDiscount, decay = self.arbitrator_decay)
+        self.last_saved_num = -1
+
+        print '----------'
+        print '############ SequentialDDPGAgent ############'
+        print 'Arbitrator Epsilon Decay = %f, Discount Factor = %.2f' % (self.arbitrator.decay, self.arbitratorDiscount)
+        print '----------'
+
+    def getActionWithQValues(self, state, testing):
+        self.arbitratorAction, q_arbi = self.arbitrator.getActionWithQValue(state, testing)
+        self.arbitratorAction = self.arbitratorAction[0]
+        scaleParameters = self.arbitratorAction
+
+        finishQValues = self.finishAgent.getQValues(state)
+        collisionQValues = self.collisionAgent.getQValues(state)
+        scalarizedQValues = scaleParameters[0] * finishQValues + scaleParameters[1] * collisionQValues
+        bestAction = np.argmax(scalarizedQValues)
+
+        dqnQValue = self.dqnAgent.getQValues(state)[bestAction]
+        return self.map_to_2D(bestAction), q_arbi, scalarizedQValues[bestAction], dqnQValue
+
+    def getAction(self, state, testing):
+        self.arbitratorAction = self.arbitrator.getAction(state, testing)[0]
+        scaleParameters = self.arbitratorAction
+
+        finishQValues = self.finishAgent.getQValues(state)
+        collisionQValues = self.collisionAgent.getQValues(state)
+        scalarizedQValues = scaleParameters[0] * finishQValues + scaleParameters[1] * collisionQValues
+
+        bestAction = self.map_to_2D(np.argmax(scalarizedQValues))
+        return bestAction
+
+    def getFinishReward(self, reward, shapedReward):
+        if reward == TIME_STEP_PENALTY + FINISH_REWARD + COLLISION_PENALTY:
+            reward = TIME_STEP_PENALTY + FINISH_REWARD
+        elif reward == TIME_STEP_PENALTY + COLLISION_PENALTY:
+            reward = TIME_STEP_PENALTY
+        elif reward == TIME_STEP_PENALTY + FINISH_REWARD:
+            pass
+        elif reward == TIME_STEP_PENALTY:
+            pass
+
+        reward += shapedReward
+
+        return reward / 50.0
+
+    def getCollisionReward(self, reward, shapedReward):
+
+        if reward == TIME_STEP_PENALTY + FINISH_REWARD + COLLISION_PENALTY:
+            reward = COLLISION_PENALTY
+        elif reward == TIME_STEP_PENALTY + COLLISION_PENALTY:
+            reward = COLLISION_PENALTY
+        elif reward == TIME_STEP_PENALTY + FINISH_REWARD:
+            reward = -TIME_STEP_PENALTY
+        elif reward == TIME_STEP_PENALTY:
+            reward = -TIME_STEP_PENALTY
+
+        return reward / 50.0
+
+    def update(self, state, action, nextState, reward, done):
+        action = self.map_to_1D(action)
+        shapedReward = Environment.getShapedReward(state, nextState)
+
+        self.finishAgent.update(state, action, nextState, self.finishReward(reward - shapedReward, shapedReward), done)
+        self.collisionAgent.update(state, action, nextState, self.collisionReward(reward - shapedReward, shapedReward), done)
+        self.dqnAgent.update(state, action, nextState, float(reward) / 50., done)
+        self.arbitrator.update(state, self.arbitratorAction, nextState, float(reward) / 50., done)

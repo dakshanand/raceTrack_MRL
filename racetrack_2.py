@@ -21,7 +21,8 @@ env = Environment(layout)
 # agent = TestingAgent(layout = layout)
 # agent = CollisionAgent(layout = layout)
 # agent = SequentialArbiQAgent(layout = layout)
-agent = SequentialDDPGAgent(layout = layout)
+# agent = SequentialDDPGAgent(layout = layout)
+agent = DDPGGraphAgent(layout = layout)
 
 # ################################################################################
 # ################################################################################
@@ -56,14 +57,18 @@ def run_episode(agent, env, visuals, testing = False):
     env.reset()
     state = env.start()
     episode_score, episode_steps = 0, 0
-    valueDifference = 0.
+    # valueDifference = 0.
+    all_q_values = [0., 0., 0.]
     gameOver, done = False, False
     while not gameOver:
         episode_steps += 1
         if testing:
-            action, q_arbi, q_joint = agent.getActionWithQValues(state, testing)
-            difference = findDifference(q_arbi, q_joint)
-            valueDifference += difference
+            action, q_arbi, q_joint, dqn_q = agent.getActionWithQValues(state, testing)
+            # difference = findDifference(q_arbi, q_joint)
+            # valueDifference += difference
+            all_q_values[0] += q_arbi
+            all_q_values[1] += q_joint
+            all_q_values[2] += dqn_q
         else:
             action = agent.getAction(state, testing)
         next_state, reward, done = env.step(state, action)
@@ -82,22 +87,28 @@ def run_episode(agent, env, visuals, testing = False):
     # else: print "---------------------CRASHED------------------------"
 
     if testing:
-        return episode_score, episode_steps, done, valueDifference
+        # return episode_score, episode_steps, done, valueDifference
+        return episode_score, episode_steps, done, all_q_values
     else:
         return episode_score, episode_steps, done
 
 def begin_testing(agent, env, visuals):
     score_list = []
     total_steps, finish_count = 0, 0
-    q_differences = 0.
-
+    # q_differences = 0.
+    all_q_values = [0., 0., 0.]
     for test_num in range(testRepitition):
-        episode_score, episode_steps, done, q_difference = run_episode(agent, env, visuals, testing = True)
+        episode_score, episode_steps, done, all_q_value = run_episode(agent, env, visuals, testing = True)
         total_steps += episode_steps
         finish_count += done
         score_list.append(episode_score)
-        q_differences += q_difference
-    return score_list, total_steps, finish_count, round(q_differences / testRepitition, 3)
+        all_q_values[0] = all_q_value[0]
+        all_q_values[1] = all_q_value[1]
+        all_q_values[2] = all_q_value[2]
+        # q_differences += q_difference
+    all_q_values = [round(x / testRepitition, 3) for x in all_q_values]
+    # return score_list, total_steps, finish_count, round(q_differences / testRepitition, 3)
+    return score_list, total_steps, finish_count, all_q_values
 
 
 numEpisodes = 2000
@@ -105,6 +116,7 @@ def start_it_baby():
     current_training_average, training_averages, training_steps = 0., [], 0.
     test_scores, test_averages, test_finishes = [], [], []
     q_differences = []
+    q_values = [[], [], []]
     for episode_num in range(numEpisodes):
 
         agent.training_episode_num = episode_num
@@ -119,16 +131,19 @@ def start_it_baby():
             print 'Episodes Completed = %d and training_steps = %d, average = %.2f' % (episode_num, training_steps, current_training_average)
             # print training_rewards
             current_training_average = 0.
-            score_list, total_steps, finish_count, q_difference = begin_testing(agent, env, visuals)
+            score_list, total_steps, finish_count, q_value = begin_testing(agent, env, visuals)
             test_scores += score_list
             test_finishes.append(finish_count)
             test_averages.append(sum(score_list) / float(len(score_list)))
-            q_differences.append(round(q_difference, 3))
+            q_values[0].append(q_value[0])
+            q_values[1].append(q_value[1])
+            q_values[2].append(q_value[2])
+            # q_differences.append(round(q_difference, 3))
             print score_list, total_steps, finish_count
-            print test_averages, q_differences
+            # print test_averages, q_values
 
 
     print 'TRAINING AVERAGE', training_averages
     print 'TESTING AVERAGE', test_averages
-    print 'Q DIFFERENCE', q_differences
+    print 'Q DIFFERENCE', q_values
 start_it_baby()
