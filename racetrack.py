@@ -4,24 +4,29 @@ import math
 import time
 import random
 import numpy as np
+import sys
 
 import layout_parser
 from variables import *
 from qLearningAgents import *
 from visualizer import Visualizer
 from environment import Environment
+from rewardScales import *
+
+if len(sys.argv) > 1: TRIAL_NUM = int(sys.argv[1])
+else: TRIAL_NUM = -1
 
 layout_name = 'f1'
 layout = layout_parser.getLayout( layout_name )
 visuals = Visualizer(layout)
 env = Environment(layout)
-# agent = HierarchicalDDPGAgent(layout = layout)
+agent = HierarchicalDDPGAgent(layout = layout, trialNum = TRIAL_NUM)
 # agent = DQNBaselineAgent(layout = layout)
 # agent = GmQAgent(layout = layout)
 # agent = TestingAgent(layout = layout)
 # agent = CollisionAgent(layout = layout)
 # agent = SequentialArbiQAgent(layout = layout)
-agent = SequentialDDPGAgent(layout = layout)
+# agent = SequentialDDPGAgent(layout = layout)
 
 # ################################################################################
 # ################################################################################
@@ -48,7 +53,6 @@ agent = SequentialDDPGAgent(layout = layout)
 #
 # ################################################################################
 # ################################################################################
-
 def run_episode(agent, env, visuals, testing = False):
     env.reset()
     state = env.start()
@@ -102,18 +106,19 @@ def start_it_baby():
         if ((episode_num+1) % testInterval == 0) and episode_num > START_TESTING_FROM:
             current_training_average /= float(testInterval)
             training_averages.append(current_training_average)
-            print 'Episodes Completed = %d and training_steps = %d, average = %.2f' % (episode_num, training_steps, current_training_average)
+            # print 'Episodes Completed = %d and training_steps = %d, average = %.2f' % (episode_num, training_steps, current_training_average)
             # print training_rewards
             current_training_average = 0.
             score_list, total_steps, finish_count = begin_testing(agent, env, visuals)
             test_scores += score_list
             test_finishes.append(finish_count)
             test_averages.append(sum(score_list) / float(len(score_list)))
-            print score_list, total_steps, finish_count
-            print test_averages
-
-
+            # print score_list, total_steps, finish_count
+            # print test_averages
+    if TRIAL_NUM != -1:
+        print "TRIAL NUM-", TRIAL_NUM, rewardScales[TRIAL_NUM]
     print 'TRAINING AVERAGE', training_averages
     print 'TESTING AVERAGE', test_averages
+    print "---------------------------------------------------"
 
 start_it_baby()
