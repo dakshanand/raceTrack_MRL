@@ -55,9 +55,9 @@ class Agent:
         elif reward == TIME_STEP_PENALTY + COLLISION_PENALTY:
             reward = self.modifiedTimeFinish
         elif reward == TIME_STEP_PENALTY + FINISH_REWARD:
-            pass
+            reward = self.modifiedTimeFinish + self.modifiedFinishReward
         elif reward == TIME_STEP_PENALTY:
-            pass
+            reward = self.modifiedTimeFinish
 
         reward += shapedReward
 
@@ -78,7 +78,14 @@ class Agent:
     def __init__(self, layout, trialNum = -1):
         self.layout = layout
         self.trialNum = trialNum
-        self.setRewardScales()
+        if self.trialNum != -1:
+            self.setRewardScales()
+            self.finishReward = self.getModifiedFinishReward
+            self.collisionReward = self.getModifiedCollisionReward
+        else:
+            self.finishReward = self.getFinishReward
+            self.collisionReward = self.getCollisionReward
+
 
     def update(self, state, action, nextState, reward):
         pass

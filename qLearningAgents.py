@@ -217,6 +217,8 @@ class HierarchicalDDPGAgent(Agent):
         print 'FinishAgent: Discount Factor = %.2f' % (self.finishDiscount)
         print 'CollisionAgent: Discount Factor = %.2f' % (self.collisionDiscount)
         print 'Arbitrator: Epsilon Decay = %f, Discount Factor = %.2f' % (self.arbitrator.decay, self.arbitratorDiscount)
+        print 'Reward: Finish+Time = %.2f, Collision = %.2f, FinishTimePenalty = %.2f, CollisionTimePenalty = %.2f' % \
+        (50*self.finishReward(TIME_STEP_PENALTY + FINISH_REWARD, 0), 50*self.collisionReward(TIME_STEP_PENALTY + COLLISION_PENALTY, 0), 50*self.finishReward(TIME_STEP_PENALTY, 0), 50*self.collisionReward(TIME_STEP_PENALTY, 0))
         print '----------'
 
     def getAction(self, state, testing):
@@ -277,10 +279,8 @@ class HierarchicalDDPGAgent(Agent):
         if self.arbitratorAction[0] != -10:
             self.arbitrator.update(state, self.arbitratorAction, nextState, float(reward) / 50.0, done)
 
-        finishReward = self.getFinishReward(reward - shapedReward, shapedReward) if self.trialNum == -1 else self.getModifiedFinishReward(reward - shapedReward, shapedReward)
-        collisionReward = self.getCollisionReward(reward - shapedReward, shapedReward) if self.trialNum == -1 else self.getModifiedCollisionReward(reward - shapedReward, shapedReward)
-        self.finishAgent.update(state, action, nextState, finishReward, done)
-        self.collisionAgent.update(state, action, nextState, collisionReward, done)
+        self.finishAgent.update(state, action, nextState, self.finishReward(reward - shapedReward, shapedReward), done)
+        self.collisionAgent.update(state, action, nextState, self.collisionReward(reward - shapedReward, shapedReward), done)
 
 class SequentialDDPGAgent(Agent):
     def __init__(self, **args):
@@ -558,6 +558,8 @@ class GmQAgent(Agent):
         print '----------'
         print '############ GmQAgent ############'
         print 'Epsilon Decay = %s, Discount Factor = %.2f' % (self.decay, self.discount)
+        print 'Reward: Finish+Time = %.2f, Collision = %.2f, FinishTimePenalty = %.2f, CollisionTimePenalty = %.2f' % \
+        (50*self.finishReward(TIME_STEP_PENALTY + FINISH_REWARD, 0), 50*self.collisionReward(TIME_STEP_PENALTY + COLLISION_PENALTY, 0), 50*self.finishReward(TIME_STEP_PENALTY, 0), 50*self.collisionReward(TIME_STEP_PENALTY, 0))
         print '----------'
         self.last_saved_num = -1
 
@@ -607,8 +609,8 @@ class GmQAgent(Agent):
 
         action = self.map_to_1D(action)
         shapedReward = Environment.getShapedReward(state, nextState)
-        self.finishAgent.update(state, action, nextState, self.getFinishReward(reward - shapedReward, shapedReward), done)
-        self.collisionAgent.update(state, action, nextState, self.getCollisionReward(reward - shapedReward, shapedReward), done)
+        self.finishAgent.update(state, action, nextState, self.finishReward(reward - shapedReward, shapedReward), done)
+        self.collisionAgent.update(state, action, nextState, self.collisionReward(reward - shapedReward, shapedReward), done)
 
 class CollisionAgent(Agent):
     def __init__(self, **args):
