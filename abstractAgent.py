@@ -11,6 +11,7 @@ import pygame
 import random
 
 import layout_parser
+from rewardScales import *
 from variables import *
 from keras.models import model_from_json
 
@@ -40,9 +41,44 @@ class Agent:
         loaded_model.load_weights('weights/' + file_name + '.h5')
         return loaded_model
 
+    def setRewardScales(self):
+        if self.trialNum == -1:
+            return
+        self.modifiedFinishReward = rewardScales[self.trialNum][0]
+        self.modifiedCollisionPenalty = rewardScales[self.trialNum][1]
+        self.modifiedTimeFinish = rewardScales[self.trialNum][2]
+        self.modifiedTimeCollision = rewardScales[self.trialNum][3]
+
+    def getModifiedFinishReward(self, reward, shapedReward):
+        if reward == TIME_STEP_PENALTY + FINISH_REWARD + COLLISION_PENALTY:
+            reward = self.modifiedTimeFinish + self.modifiedFinishReward
+        elif reward == TIME_STEP_PENALTY + COLLISION_PENALTY:
+            reward = self.modifiedTimeFinish
+        elif reward == TIME_STEP_PENALTY + FINISH_REWARD:
+            pass
+        elif reward == TIME_STEP_PENALTY:
+            pass
+
+        reward += shapedReward
+
+        return reward / 50.0
+
+    def getModifiedCollisionReward(self, reward, shapedReward):
+        if reward == TIME_STEP_PENALTY + FINISH_REWARD + COLLISION_PENALTY:
+            reward = self.modifiedCollisionPenalty
+        elif reward == TIME_STEP_PENALTY + COLLISION_PENALTY:
+            reward = self.modifiedCollisionPenalty
+        elif reward == TIME_STEP_PENALTY + FINISH_REWARD:
+            reward = -self.modifiedTimeCollision
+        elif reward == TIME_STEP_PENALTY:
+            reward = -self.modifiedTimeCollision
+
+        return reward / 50.0
     #CONSTRUCTOR
-    def __init__(self, layout):
+    def __init__(self, layout, trialNum = -1):
         self.layout = layout
+        self.trialNum = trialNum
+        self.setRewardScales()
 
     def update(self, state, action, nextState, reward):
         pass

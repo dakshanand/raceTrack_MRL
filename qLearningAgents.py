@@ -20,7 +20,6 @@ import random,util,math
 from abstractAgent import Agent
 from featureExtractors import *
 from environment import *
-
 identifier = ''
 
 class DQNBaselineAgent(Agent):
@@ -211,6 +210,7 @@ class HierarchicalDDPGAgent(Agent):
         self.collisionAgent = DqnModule(nb_features = self.nb_collisionFeatures, featureExtractor = FeatureExtractor(self.layout).getSimplestFeatures, nb_actions = self.nb_actions, discount = self.collisionDiscount)
         self.arbitrator = DDPGModule(nb_features = self.nb_features, featureExtractor = FeatureExtractor(self.layout).getSimplestFeatures, nb_actions = self.arbitrator_actions, discount = self.arbitratorDiscount, decay = self.arbitratorDecay)
         self.last_saved_num = -1
+
         print '----------'
         print '############ HierarchicalDDPGAgent ############'
         print 'Outside Epsilon Decay = %f' % (self.outside_decay)
@@ -277,8 +277,10 @@ class HierarchicalDDPGAgent(Agent):
         if self.arbitratorAction[0] != -10:
             self.arbitrator.update(state, self.arbitratorAction, nextState, float(reward) / 50.0, done)
 
-        self.finishAgent.update(state, action, nextState, self.getFinishReward(reward - shapedReward, shapedReward), done)
-        self.collisionAgent.update(state, action, nextState, self.getCollisionReward(reward - shapedReward, shapedReward), done)
+        finishReward = self.getFinishReward(reward - shapedReward, shapedReward) if self.trialNum == -1 else self.getModifiedFinishReward(reward - shapedReward, shapedReward)
+        collisionReward = self.getCollisionReward(reward - shapedReward, shapedReward) if self.trialNum == -1 else self.getModifiedCollisionReward(reward - shapedReward, shapedReward)
+        self.finishAgent.update(state, action, nextState, finishReward, done)
+        self.collisionAgent.update(state, action, nextState, collisionReward, done)
 
 class SequentialDDPGAgent(Agent):
     def __init__(self, **args):
