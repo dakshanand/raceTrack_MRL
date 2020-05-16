@@ -22,6 +22,9 @@ from featureExtractors import *
 from environment import *
 identifier = ''
 
+from tensorflow.python.util import deprecation
+deprecation._PRINT_DEPRECATION_WARNINGS = False
+
 class DQNBaselineAgent(Agent):
     def __init__(self, **args):
         Agent.__init__(self, **args)

@@ -1,4 +1,6 @@
 # coding: utf-8
+import os
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
 import math
 import time
@@ -20,9 +22,9 @@ layout_name = 'f1'
 layout = layout_parser.getLayout( layout_name )
 visuals = Visualizer(layout)
 env = Environment(layout)
-# agent = HierarchicalDDPGAgent(layout = layout, trialNum = TRIAL_NUM)
+agent = HierarchicalDDPGAgent(layout = layout, trialNum = TRIAL_NUM)
 # agent = DQNBaselineAgent(layout = layout)
-agent = GmQAgent(layout = layout, trialNum = TRIAL_NUM)
+# agent = GmQAgent(layout = layout, trialNum = TRIAL_NUM)
 # agent = TestingAgent(layout = layout)
 # agent = CollisionAgent(layout = layout)
 # agent = SequentialArbiQAgent(layout = layout)
