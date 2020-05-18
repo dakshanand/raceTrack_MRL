@@ -29,7 +29,8 @@ def averageVector(vectors):
 
     return average
 
-plt.plot(runningAvg(averageVector([Gm0_1, Gm0_2, Gm0_3, Gm0_4]), 20), color='b', label = 'gm0')
+plt.plot(runningAvg(averageVector([Gm8_1, Gm8_2, Gm8_3, Gm8_4]), 20), color='b', label = 'gm3')
+plt.plot(runningAvg(averageVector([ddpg8_1, ddpg8_2, ddpg8_3, ddpg8_4]), 20), color='r', label = 'ddpg3')
 
 plt.legend(bbox_to_anchor=(0.95,0.2), loc=1, borderaxespad=0.)
 plt.xlabel('Number of training epochs')
