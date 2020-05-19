@@ -115,7 +115,7 @@ def start_it_baby():
             test_scores += score_list
             test_finishes.append(finish_count)
             test_averages.append(sum(score_list) / float(len(score_list)))
-            # print score_list, total_steps, finish_count
+            print score_list, total_steps, finish_count
             # print test_averages
     if TRIAL_NUM != -1:
         print "TRIAL NUM-", TRIAL_NUM, rewardScales[TRIAL_NUM]

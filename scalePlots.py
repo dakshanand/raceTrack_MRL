@@ -29,8 +29,18 @@ def averageVector(vectors):
 
     return average
 
-plt.plot(runningAvg(averageVector([Gm8_1, Gm8_2, Gm8_3, Gm8_4]), 20), color='b', label = 'gm3')
-plt.plot(runningAvg(averageVector([ddpg8_1, ddpg8_2, ddpg8_3, ddpg8_4]), 20), color='r', label = 'ddpg3')
+# plt.plot(runningAvg(averageVector([Gm17_1, Gm17_2, Gm17_3, Gm17_4]), 20), color='b', label = 'gm3')
+# plt.plot(runningAvg(averageVector([ddpg17_1, ddpg17_2, ddpg17_3, ddpg17_4]), 20), color='k', label = 'ddpg3')
+
+# plt.plot(runningAvg(averageVector([Gm17_1]), 20), color='b', label = 'ddpg3')
+# plt.plot(runningAvg(averageVector([Gm17_2]), 20), color='b', label = 'ddpg3')
+# plt.plot(runningAvg(averageVector([Gm17_3]), 20), color='b', label = 'ddpg3')
+# plt.plot(runningAvg(averageVector([Gm17_4]), 20), color='b', label = 'ddpg3')
+
+plt.plot(runningAvg(averageVector([ddpg14_1]), 20), color='k', label = 'ddpg3')
+plt.plot(runningAvg(averageVector([ddpg14_2]), 20), color='k', label = 'ddpg3')
+plt.plot(runningAvg(averageVector([ddpg14_3]), 20), color='k', label = 'ddpg3')
+plt.plot(runningAvg(averageVector([ddpg14_4]), 20), color='k', label = 'ddpg3')
 
 plt.legend(bbox_to_anchor=(0.95,0.2), loc=1, borderaxespad=0.)
 plt.xlabel('Number of training epochs')

@@ -25,6 +25,11 @@ identifier = ''
 from tensorflow.python.util import deprecation
 deprecation._PRINT_DEPRECATION_WARNINGS = False
 
+MODIFIED_FINISH_REWARD = 10
+MODIFIED_COLLISION_PENALTY = -30
+MODIFIED_FINISH_TIME_PENALTY = -1
+MODIFIED_COLLISION_TIME_PENALTY = -5
+
 class DQNBaselineAgent(Agent):
     def __init__(self, **args):
         Agent.__init__(self, **args)
@@ -247,13 +252,13 @@ class HierarchicalDDPGAgent(Agent):
 
     def getFinishReward(self, reward, shapedReward):
         if reward == TIME_STEP_PENALTY + FINISH_REWARD + COLLISION_PENALTY:
-            reward = TIME_STEP_PENALTY + FINISH_REWARD
+            reward = MODIFIED_FINISH_TIME_PENALTY + MODIFIED_FINISH_REWARD
         elif reward == TIME_STEP_PENALTY + COLLISION_PENALTY:
-            reward = TIME_STEP_PENALTY
+            reward = MODIFIED_FINISH_TIME_PENALTY
         elif reward == TIME_STEP_PENALTY + FINISH_REWARD:
-            pass
+            reward = MODIFIED_FINISH_TIME_PENALTY + MODIFIED_FINISH_REWARD
         elif reward == TIME_STEP_PENALTY:
-            pass
+            reward = MODIFIED_FINISH_TIME_PENALTY
 
         reward += shapedReward
 
@@ -262,13 +267,13 @@ class HierarchicalDDPGAgent(Agent):
     def getCollisionReward(self, reward, shapedReward):
 
         if reward == TIME_STEP_PENALTY + FINISH_REWARD + COLLISION_PENALTY:
-            reward = COLLISION_PENALTY
+            reward = MODIFIED_COLLISION_PENALTY
         elif reward == TIME_STEP_PENALTY + COLLISION_PENALTY:
-            reward = COLLISION_PENALTY
+            reward = MODIFIED_COLLISION_PENALTY
         elif reward == TIME_STEP_PENALTY + FINISH_REWARD:
-            reward = -TIME_STEP_PENALTY
+            reward = -MODIFIED_COLLISION_TIME_PENALTY
         elif reward == TIME_STEP_PENALTY:
-            reward = -TIME_STEP_PENALTY
+            reward = -MODIFIED_COLLISION_TIME_PENALTY
 
         return reward / 50.0
 
@@ -584,11 +589,13 @@ class GmQAgent(Agent):
 
     def getFinishReward(self, reward, shapedReward):
         if reward == TIME_STEP_PENALTY + FINISH_REWARD + COLLISION_PENALTY:
-            reward = TIME_STEP_PENALTY + FINISH_REWARD
+            reward = MODIFIED_FINISH_TIME_PENALTY + MODIFIED_FINISH_REWARD
         elif reward == TIME_STEP_PENALTY + COLLISION_PENALTY:
-            reward = TIME_STEP_PENALTY
-        else:
-            pass
+            reward = MODIFIED_FINISH_TIME_PENALTY
+        elif reward == TIME_STEP_PENALTY + FINISH_REWARD:
+            reward = MODIFIED_FINISH_TIME_PENALTY + MODIFIED_FINISH_REWARD
+        elif reward == TIME_STEP_PENALTY:
+            reward = MODIFIED_FINISH_TIME_PENALTY
 
         reward += shapedReward
 
@@ -597,13 +604,16 @@ class GmQAgent(Agent):
     def getCollisionReward(self, reward, shapedReward):
 
         if reward == TIME_STEP_PENALTY + FINISH_REWARD + COLLISION_PENALTY:
-            reward = COLLISION_PENALTY
+            reward = MODIFIED_COLLISION_PENALTY
         elif reward == TIME_STEP_PENALTY + COLLISION_PENALTY:
-            reward = COLLISION_PENALTY
-        else:
-            reward = -TIME_STEP_PENALTY
+            reward = MODIFIED_COLLISION_PENALTY
+        elif reward == TIME_STEP_PENALTY + FINISH_REWARD:
+            reward = -MODIFIED_COLLISION_TIME_PENALTY
+        elif reward == TIME_STEP_PENALTY:
+            reward = -MODIFIED_COLLISION_TIME_PENALTY
 
         return reward / 50.0
+
 
     def update(self, state, action, nextState, reward, done):
         if self.epsilon > self.min_epsilon:
